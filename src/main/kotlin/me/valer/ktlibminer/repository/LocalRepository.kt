@@ -1,4 +1,4 @@
-package repository
+package me.valer.ktlibminer.repository
 
 import java.io.File
 import java.io.IOException

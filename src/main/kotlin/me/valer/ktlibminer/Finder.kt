@@ -4,27 +4,33 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import me.valer.ktlibminer.repository.RemoteRepository
 
+const val SLEEP: Long = 30_000
+const val maxBound = 10000
+const val maxPage = 10
+const val maxRes = 1000
+
 class Finder(var lib: String, var goal: Int) {
     private var page = 1
     private var lbound = 0
     private var rbound = 50
-    val maxBound = 10000
+
     var total = 0
 
-    // private val linkSC = "https://searchcode.com/api/codesearch_I/"
     private val linkGH = "https://api.github.com/search/code"
     private val token = javaClass.getResource("/token.txt")!!.readText().trim()
 
     fun findReps(): MutableList<RemoteRepository> {
-        var res = mutableListOf<RemoteRepository>()
-        if (page > 10) {
+        var reps = mutableListOf<RemoteRepository>()
+        var response = ""
+        if (page > maxPage) {
             nextBounds()
             page = 1
         }
         while (true) {
-            if (lbound >= maxBound || total >= goal) return res
+            if (lbound >= maxBound || total >= goal) return reps
             try {
-                res = makeRequest()
+                response = makeRequest()
+                reps = getRemoteReps(response)
                 page++
                 break
             } catch (e: GithubException) {
@@ -33,12 +39,12 @@ class Finder(var lib: String, var goal: Int) {
                         nextBounds()
                         page = 1
                     }
-                    State.ABORTED -> Thread.sleep(30_000)
+                    State.ABORTED -> Thread.sleep(SLEEP)
                     State.OVER -> rbound -= (rbound - lbound) / 2
                 }
             }
         }
-        return res
+        return reps
     }
 
 
@@ -48,7 +54,7 @@ class Finder(var lib: String, var goal: Int) {
         rbound += delta
     }
 
-    private fun makeRequest(): MutableList<RemoteRepository> {
+    private fun makeRequest(): String {
         val response = khttp.get(
             url = linkGH,
             params = mapOf(
@@ -56,26 +62,24 @@ class Finder(var lib: String, var goal: Int) {
                 "per_page" to "100",
                 "page" to page.toString()
             ),
-            //params = mapOf("q" to lib, "in" to "file", "language" to "kotlin"),
             headers = mapOf("Authorization" to "Token $token")
         )
         println(response.text)
-        return extractData(response.text)
+        return response.text
     }
 
 
-    private fun extractData(response: String): MutableList<RemoteRepository> {
+    private fun getRemoteReps(response: String): MutableList<RemoteRepository> {
         val json = JsonParser.parseString(response).asJsonObject
         if (json.has("message")) throw GithubException(State.ABORTED)
-        if (json.get("total_count").asInt > 1000 && (rbound - lbound > 1)) throw GithubException(State.OVER)
+        if (json.get("total_count").asInt > maxRes && (rbound - lbound > 1)) throw GithubException(State.OVER)
         val items = json.getAsJsonArray("items")
         if (items.size() == 0) throw GithubException(State.EMPTY)
+
         val reps = mutableListOf<RemoteRepository>()
         for (item in items) {
             reps.add(RemoteRepository((item as JsonObject).get("repository") as JsonObject))
         }
-        //println(reps)
-        //print(items.size())
         total += items.size()
         return reps
     }
@@ -84,12 +88,3 @@ class Finder(var lib: String, var goal: Int) {
 class GithubException(val state: State) : Exception()
 enum class State { ABORTED, OVER, EMPTY }
 
-/**
-fun findSC() {
-val response = khttp.get(
-url = linkSC,
-params = mapOf("q" to lib, "lan" to "145", "p" to page.toString(), "per_page" to "100", "src" to "2")
-)
-println(response)
-}
- **/

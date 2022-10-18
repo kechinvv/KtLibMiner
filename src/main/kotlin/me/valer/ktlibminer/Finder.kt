@@ -21,7 +21,7 @@ class Finder(var lib: String, var goal: Int) {
 
     fun findReps(): MutableList<RemoteRepository> {
         var reps = mutableListOf<RemoteRepository>()
-        var response = ""
+        var response: String
         if (page > maxPage) {
             nextBounds()
             page = 1

@@ -10,7 +10,7 @@ const val maxPage = 10
 const val maxRes = 1000
 const val linkGH = "https://api.github.com/search/code"
 
-class ProjectsSequence(val lib: String, val goal: Int = 1000000) : Sequence<RemoteRepository> {
+class ProjectsSequence(val lib: String) : Sequence<RemoteRepository> {
     private var page = 1
     private var lbound = 0
     private var rbound = 50
@@ -20,15 +20,18 @@ class ProjectsSequence(val lib: String, val goal: Int = 1000000) : Sequence<Remo
     private val token = javaClass.getResource("/token.txt")!!.readText().trim()
 
     private val inner = generateSequence {
-        if (page > maxPage) {
-            nextBounds()
-            page = 1
+        if (lbound < maxBound) null
+        else {
+            if (page > maxPage) {
+                nextBounds()
+                page = 1
+            }
+            val response = makeRequest()
+            val json = JsonParser.parseString(response).asJsonObject
+            val reps = getReps(json)
+            reps
         }
-        val response = makeRequest()
-        val json = JsonParser.parseString(response).asJsonObject
-        val reps = getReps(json)
-        reps.toList()
-    }.flatten().takeIf { lbound < maxBound && total < goal }
+    }.flatten()
 
     private fun nextBounds() {
         val delta = (rbound - lbound) * 2
@@ -48,7 +51,7 @@ class ProjectsSequence(val lib: String, val goal: Int = 1000000) : Sequence<Remo
         ).text
     }
 
-    private fun getReps(json: JsonObject): MutableList<RemoteRepository> {
+    private fun getReps(json: JsonObject): List<RemoteRepository> {
         val reps = mutableListOf<RemoteRepository>()
         if (json.has("message")) Thread.sleep(SLEEP)
         else if (json.get("total_count").asInt > maxRes && (rbound - lbound > 1)) rbound -= (rbound - lbound) / 2
@@ -66,6 +69,6 @@ class ProjectsSequence(val lib: String, val goal: Int = 1000000) : Sequence<Remo
         return reps
     }
 
-    override fun iterator(): Iterator<RemoteRepository> = inner!!.iterator()
+    override fun iterator(): Iterator<RemoteRepository> = inner.iterator()
 
 }

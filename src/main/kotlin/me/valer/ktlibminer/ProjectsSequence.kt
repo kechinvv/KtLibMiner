@@ -20,7 +20,7 @@ class ProjectsSequence(val lib: String) : Sequence<RemoteRepository> {
     private val token = javaClass.getResource("/token.txt")!!.readText().trim()
 
     private val inner = generateSequence {
-        if (lbound < maxBound) null
+        if (lbound > maxBound) null
         else {
             if (page > maxPage) {
                 nextBounds()
@@ -43,7 +43,7 @@ class ProjectsSequence(val lib: String) : Sequence<RemoteRepository> {
         return khttp.get(
             url = linkGH,
             params = mapOf(
-                "q" to "import+$lib in:file language:kotlin size:$lbound..$rbound",
+                "q" to "$lib in:file language:kotlin size:$lbound..$rbound",
                 "per_page" to "100",
                 "page" to page.toString()
             ),

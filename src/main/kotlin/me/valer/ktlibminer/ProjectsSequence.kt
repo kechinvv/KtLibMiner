@@ -10,14 +10,13 @@ const val maxPage = 10
 const val maxRes = 1000
 const val linkGH = "https://api.github.com/search/code"
 
-class ProjectsSequence(val lib: String) : Sequence<RemoteRepository> {
+class ProjectsSequence(val lib: String, val token: String) : Sequence<RemoteRepository> {
     private var page = 1
     private var lbound = 0
     private var rbound = 50
 
     private var total = 0
 
-    private val token = javaClass.getResource("/token.txt")!!.readText().trim()
 
     private val inner = generateSequence {
         if (lbound > maxBound) null
@@ -53,7 +52,9 @@ class ProjectsSequence(val lib: String) : Sequence<RemoteRepository> {
 
     private fun getReps(json: JsonObject): List<RemoteRepository> {
         val reps = mutableListOf<RemoteRepository>()
-        if (json.has("message")) Thread.sleep(SLEEP)
+        if (json.has("message"))
+            if (json.get("message").equals("Bad credentials")) throw Exception("Bad credentials")
+            else Thread.sleep(SLEEP)
         else if (json.get("total_count").asInt > maxRes && (rbound - lbound > 1)) rbound -= (rbound - lbound) / 2
         else {
             val items = json.getAsJsonArray("items")

@@ -10,13 +10,13 @@ class RemoteRepository() {
     lateinit var name: String
 
     constructor(url: String, name: String) : this() {
-        this.url = url
-        this.name = name
+        this.url = url.replace("\"", "")
+        this.name = name.replace("\"", "")
     }
 
     constructor(repoJSON: JsonObject) : this() {
-        this.url = repoJSON.get("html_url").toString()
-        this.name = repoJSON.get("full_name").toString()
+        this.url = repoJSON.get("html_url").toString().replace("\"", "")
+        this.name = repoJSON.get("full_name").toString().replace("\"", "")
     }
 
     override fun toString(): String {

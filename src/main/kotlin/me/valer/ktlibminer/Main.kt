@@ -13,6 +13,8 @@ fun main(args: Array<String>) {
     val list = seq.take(200).distinctBy { it.name }.toList()
     println(list)
     list.forEach {
-        it.cloneTo(Path("C:/Users/valer/IdeaProjects/KtLibMiner/src/test/resources/" + it.name.replace('/', '_')))
+        val prj =
+            it.cloneTo(Path("C:/Users/valer/IdeaProjects/KtLibMiner/src/test/resources/" + it.name.replace('/', '_')))
+        prj.getKfg()
     }
 }

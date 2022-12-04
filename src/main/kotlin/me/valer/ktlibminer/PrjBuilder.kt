@@ -54,6 +54,8 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
         return try {
             connector.connect().use {
                 val build = it.newBuild()
+                build.forTasks("clean")
+                build.run()
                 build.forTasks("build")
                 build.run()
             }
@@ -70,7 +72,8 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
             val v = Verifier(baseDir)
             v.setEnvironmentVariable("maven.multiModuleProjectDirectory", baseDir)
             if (maven_path != null) v.setLocalRepo(maven_path.toString())
-            v.addCliArguments("package")
+            v.addCliArguments("clean")
+            v.addCliArguments("compile")
             v.execute()
             true
         } catch (e: Exception) {

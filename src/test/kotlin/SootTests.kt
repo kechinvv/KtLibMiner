@@ -1,8 +1,14 @@
+import heros.IFDSTabulationProblem
 import heros.InterproceduralCFG
+import heros.solver.IFDSSolver
 import org.junit.jupiter.api.Test
 import soot.*
 import soot.Unit
 import soot.jimple.toolkits.callgraph.CallGraph
+import soot.jimple.toolkits.ide.exampleproblems.IFDSLocalInfoFlow
+import soot.jimple.toolkits.ide.exampleproblems.IFDSReachingDefinitions
+import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG
 import soot.options.Options
 import soot.util.dot.DotGraph
@@ -17,120 +23,120 @@ class SootTests {
     var dotIcfg: DotGraph? = null
 
 
-    @Test
-    fun testGraphCall() {
-        val classpath =
-            "C:\\Users\\valer\\IdeaProjects\\forkfgtest\\01\\kotlin\\main\\me\\valer\\ktlibminer"
-        val modulePath =
-            "C:\\Users\\valer\\IdeaProjects\\forkfgtest\\01\\kotlin\\main\\me\\valer\\ktlibminer"
-        val mainClass =
-            "C:\\Users\\valer\\IdeaProjects\\forkfgtest\\01\\kotlin\\main\\me\\valer\\ktlibminer\\MainKt.class"
-        val secClass =
-            "C:\\Users\\valer\\IdeaProjects\\forkfgtest\\01\\kotlin\\main\\me\\valer\\ktlibminer\\PrjBuilder.class"
-        val classpath2 = "C:\\Users\\valer\\IdeaProjects\\KtLibMiner\\build\\libs\\KtLibMiner-1.0-SNAPSHOT.jar"
-
-        // Options.v().set_soot_modulepath(modulePath)
-
-
-        // load classes from modules into Soot
-        // Here, getClassUnderModulePath() expects the module path to be set using the Options class as seen above
-
-
-        // load classes from modules into Soot
-        // Here, getClassUnderModulePath() expects the module path to be set using the Options class as seen above
-//        val map = ModulePathSourceLocator.v().getClassUnderModulePath(modulePath)
-//        for (module in map.keys) {
-//            for (klass in map[module]!!) {
-//                println(klass)
-//                loadClass(klass, false, module)
-//                // the loadClass() method is defined below
-//            }
-//        }
+//    @Test
+//    fun testGraphCall() {
+//        val classpath =
+//            "C:\\Users\\valer\\IdeaProjects\\forkfgtest\\01\\kotlin\\main\\me\\valer\\ktlibminer"
+//        val modulePath =
+//            "C:\\Users\\valer\\IdeaProjects\\forkfgtest\\01\\kotlin\\main\\me\\valer\\ktlibminer"
+//        val mainClass =
+//            "C:\\Users\\valer\\IdeaProjects\\forkfgtest\\01\\kotlin\\main\\me\\valer\\ktlibminer\\MainKt.class"
+//        val secClass =
+//            "C:\\Users\\valer\\IdeaProjects\\forkfgtest\\01\\kotlin\\main\\me\\valer\\ktlibminer\\PrjBuilder.class"
+//        val classpath2 = "C:\\Users\\valer\\IdeaProjects\\KtLibMiner\\build\\libs\\KtLibMiner-1.0-SNAPSHOT.jar"
+//
+//        // Options.v().set_soot_modulepath(modulePath)
+//
+//
+//        // load classes from modules into Soot
+//        // Here, getClassUnderModulePath() expects the module path to be set using the Options class as seen above
+//
+//
+//        // load classes from modules into Soot
+//        // Here, getClassUnderModulePath() expects the module path to be set using the Options class as seen above
+////        val map = ModulePathSourceLocator.v().getClassUnderModulePath(modulePath)
+////        for (module in map.keys) {
+////            for (klass in map[module]!!) {
+////                println(klass)
+////                loadClass(klass, false, module)
+////                // the loadClass() method is defined below
+////            }
+////        }
+////
+////        Scene.v().loadNecessaryClasses()
+//        // Set Soot's internal classpath
+//        //resetSoot()
+//
+//        Options.v().set_soot_classpath(classpath)
+//        Options.v().set_process_dir(Collections.singletonList(classpath))
+//        Options.v().set_prepend_classpath(true)
+//        Options.v().set_src_prec(Options.src_prec_class)
+//        // Enable whole-program mode
+//
+//        // Enable whole-program mode
+//        Options.v().set_whole_program(true)
+//        Options.v().set_app(true)
+//
+//
+//        // Call-graph options
+//
+//        // Call-graph options
+//        Options.v().setPhaseOption("cg", "safe-newinstance:true")
+//        Options.v().setPhaseOption("cg.cha", "enabled:false")
+//
+//        // Enable SPARK call-graph construction
+//
+//        // Enable SPARK call-graph construction
+//        Options.v().setPhaseOption("cg.spark", "enabled:true")
+//        Options.v().setPhaseOption("cg.spark", "verbose:true")
+//        Options.v().setPhaseOption("cg.spark", "on-fly-cg:true")
+//
+//        Options.v().set_allow_phantom_refs(true)
+//
+//        Options.v().set_output_format(Options.output_format_jimple)
+//
+//        // Set the main class of the application to be analysed
+//
+//        // Set the main class of the application to be analysed
+//        Options.v().set_main_class("MainKt")
+//
+//        // Load the main class
+//
+//        // Load the main class
+//        val c = Scene.v().loadClass("MainKt", SootClass.BODIES)
+//        //val b = Scene.v().loadClass("PrjBuilder", SootClass.BODIES)
+//        println(c.methods)
+//        //println(b.methods)
+//        c.setApplicationClass()
+//
+//        // Load the "main" method of the main class and set it as a Soot entry point
+//
+//        // Load the "main" method of the main class and set it as a Soot entry point
+//        val entryPoint = c.getMethodByName("main")
+//        val entryPoints: MutableList<SootMethod> = ArrayList()
+//        entryPoints.add(entryPoint)
+//        Scene.v().entryPoints = entryPoints
 //
 //        Scene.v().loadNecessaryClasses()
-        // Set Soot's internal classpath
-        //resetSoot()
-
-        Options.v().set_soot_classpath(classpath)
-        Options.v().set_process_dir(Collections.singletonList(classpath))
-        Options.v().set_prepend_classpath(true)
-        Options.v().set_src_prec(Options.src_prec_class)
-        // Enable whole-program mode
-
-        // Enable whole-program mode
-        Options.v().set_whole_program(true)
-        Options.v().set_app(true)
-
-
-        // Call-graph options
-
-        // Call-graph options
-        Options.v().setPhaseOption("cg", "safe-newinstance:true")
-        Options.v().setPhaseOption("cg.cha", "enabled:false")
-
-        // Enable SPARK call-graph construction
-
-        // Enable SPARK call-graph construction
-        Options.v().setPhaseOption("cg.spark", "enabled:true")
-        Options.v().setPhaseOption("cg.spark", "verbose:true")
-        Options.v().setPhaseOption("cg.spark", "on-fly-cg:true")
-
-        Options.v().set_allow_phantom_refs(true)
-
-        Options.v().set_output_format(Options.output_format_jimple)
-
-        // Set the main class of the application to be analysed
-
-        // Set the main class of the application to be analysed
-        Options.v().set_main_class("MainKt")
-
-        // Load the main class
-
-        // Load the main class
-        val c = Scene.v().loadClass("MainKt", SootClass.BODIES)
-        //val b = Scene.v().loadClass("PrjBuilder", SootClass.BODIES)
-        println(c.methods)
-        //println(b.methods)
-        c.setApplicationClass()
-
-        // Load the "main" method of the main class and set it as a Soot entry point
-
-        // Load the "main" method of the main class and set it as a Soot entry point
-        val entryPoint = c.getMethodByName("main")
-        val entryPoints: MutableList<SootMethod> = ArrayList()
-        entryPoints.add(entryPoint)
-        Scene.v().entryPoints = entryPoints
-
-        Scene.v().loadNecessaryClasses()
-
-        //PackManager.v().getPack("wjtp").add(Transform("wjtp.herosifds", IFDSDataFlowTransformer()))
-        //PackManager.v().getPack("cg").apply()
-        //PackManager.v().runPacks()
-
-        val testClass = Scene.v().getSootClass(mainClass)
-        val callGraph: CallGraph = Scene.v().callGraph
-        //val icg = InterproceduralCFG(callGraph)
-        //val view = ICFGDotVisualizer("out.dot", entryPoint, cg)
-//        var numOfEdges = 0
-//        for (sc in Scene.v().applicationClasses) {
-//            for (m in sc.methods) {
-//                val targets: Iterator<MethodOrMethodContext> = Targets(callGraph.edgesOutOf(m))
-//                while (targets.hasNext()) {
-//                    numOfEdges++
-//                    val tgt = targets.next() as SootMethod
-//                    println("$m may call $tgt")
-//                }
-//            }
-//        }
-//        println("Total edges: $numOfEdges")
-        //parseOutput(testClass, callGraph)
-
-        //runCGPack(mainClass)
-
-
-        //soot.Main.main(arrayOf())
-        //Main.main()
-    }
+//
+//        //PackManager.v().getPack("wjtp").add(Transform("wjtp.herosifds", IFDSDataFlowTransformer()))
+//        //PackManager.v().getPack("cg").apply()
+//        //PackManager.v().runPacks()
+//
+//        val testClass = Scene.v().getSootClass(mainClass)
+//        val callGraph: CallGraph = Scene.v().callGraph
+//        //val icg = InterproceduralCFG(callGraph)
+//        //val view = ICFGDotVisualizer("out.dot", entryPoint, cg)
+////        var numOfEdges = 0
+////        for (sc in Scene.v().applicationClasses) {
+////            for (m in sc.methods) {
+////                val targets: Iterator<MethodOrMethodContext> = Targets(callGraph.edgesOutOf(m))
+////                while (targets.hasNext()) {
+////                    numOfEdges++
+////                    val tgt = targets.next() as SootMethod
+////                    println("$m may call $tgt")
+////                }
+////            }
+////        }
+////        println("Total edges: $numOfEdges")
+//        //parseOutput(testClass, callGraph)
+//
+//        //runCGPack(mainClass)
+//
+//
+//        //soot.Main.main(arrayOf())
+//        //Main.main()
+//    }
 
 
     @Test
@@ -233,8 +239,7 @@ class SootTests {
 
                             // Scene.v().loadClassAndSupport("Main");
                             if (Scene.v().hasMainClass()) {
-                                System.out
-                                    .println(Scene.v().hasMainClass())
+                                println(Scene.v().hasMainClass())
 
                                 // Scene.v().loadNecessaryClasses();
                                 // Scene.v().loadBasicClasses();
@@ -291,14 +296,23 @@ class SootTests {
                                     Scene.v()
                                         .entryPoints
                                 )
-                                val icfg = JimpleBasedInterproceduralCFG()
+                                icfg = JimpleBasedInterproceduralCFG()
+
+
+                                //val problem = IFDSReachingDefinitions(icfg)
+
+                                //val solver = IFDSSolver(problem)
+
+                                //println("Starting solver")
+                                //solver.solve()
+                                //println("Done")
+
                                 var startPoint: Unit? = null
-                                println(icfg.getStartPointsOf(main_method))
-                                for (temp in icfg
-                                    .getStartPointsOf(main_method)) {
+                                println(icfg!!.getStartPointsOf(main_method))
+                                for (temp in icfg!!.getStartPointsOf(main_method)) {
                                     startPoint = temp
                                     println("START POINT SET")
-                                    println(icfg.getSuccsOf(temp))
+                                    println(icfg!!.getSuccsOf(temp))
                                     break
                                 }
 
@@ -307,7 +321,7 @@ class SootTests {
                                 G.v().out.println(
                                     (mainClass.toString())
                                 )
-                                if (startPoint != null) graphTraverse(startPoint!!, icfg)
+                                if (startPoint != null) graphTraverse(startPoint!!, icfg!!)
                                 dotIcfg!!.plot(mainClass.toString())
                             } else {
                                 println("Not a malware with main method")

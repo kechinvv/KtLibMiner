@@ -5,7 +5,7 @@ import com.google.gson.JsonParser
 import me.valer.ktlibminer.repository.RemoteRepository
 
 const val SLEEP: Long = 30_000
-const val maxBound = 10000
+const val maxBound = 20000
 const val maxPage = 10
 const val maxRes = 1000
 const val linkGH = "https://api.github.com/search/code"

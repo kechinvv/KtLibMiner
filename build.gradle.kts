@@ -4,7 +4,6 @@ fun properties(key: String) = project.findProperty(key).toString()
 
 plugins {
     kotlin("jvm") version "1.7.20"
-
 }
 
 group = "me.valer"
@@ -54,7 +53,11 @@ dependencies {
     runtimeOnly("org.slf4j:slf4j-simple:2.0.4")
 }
 
+
 tasks.test {
+    //minHeapSize = "512m"
+    //maxHeapSize = "1024m"
+    jvmArgs = listOf("-Xss512m")
     useJUnitPlatform()
 }
 

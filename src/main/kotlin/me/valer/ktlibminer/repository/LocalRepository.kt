@@ -1,9 +1,10 @@
 package me.valer.ktlibminer.repository
 
-import org.vorpal.research.kfg.ClassManager
-import org.vorpal.research.kfg.KfgConfig
-import org.vorpal.research.kfg.container.DirectoryContainer
-import org.vorpal.research.kfg.util.Flags
+import heros.InterproceduralCFG
+import me.valer.ktlibminer.CreatorICFG
+import org.vorpal.research.kfg.visitor.*
+import soot.*
+import soot.Unit
 import java.io.File
 import java.io.IOException
 import java.nio.file.*
@@ -12,6 +13,7 @@ import java.util.stream.Stream
 
 
 class LocalRepository(val path: Path) {
+    var icfg: InterproceduralCFG<Unit, SootMethod>? = null
 
     @Throws(IOException::class)
     fun delete() {
@@ -38,16 +40,10 @@ class LocalRepository(val path: Path) {
             .filter { f: File -> f.isFile && f.name.endsWith(".kt") }.map { obj: File -> obj.absolutePath }
 
 
-    fun getKfg(){
-        val cm = ClassManager(KfgConfig(Flags.readAll, failOnError = true))
-        val prj = DirectoryContainer(this.path.toFile())
-        cm.initialize(prj)
-        for (klass in cm.concreteClasses) {
-            for (method in klass.allMethods) {
-                // view each method as graph
-                method.view("C:/Program Files/Graphviz/bin/dot.exe", "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe")
-            }
-        }
+    fun getICFG(): InterproceduralCFG<Unit, SootMethod>? {
+        icfg = CreatorICFG.getICFG(path.toString())
+        return icfg
     }
-
 }
+
+

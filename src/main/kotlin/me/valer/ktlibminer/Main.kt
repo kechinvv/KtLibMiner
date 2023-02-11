@@ -15,6 +15,8 @@ fun main(args: Array<String>) {
     list.forEach {
         val prj =
             it.cloneTo(Path("C:/Users/valer/IdeaProjects/KtLibMiner/src/test/resources/" + it.name.replace('/', '_')))
-        prj.getKfg()
+        prj.getICFG()
     }
 }
+
+

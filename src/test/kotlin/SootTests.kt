@@ -1,27 +1,69 @@
-import heros.IFDSTabulationProblem
 import heros.InterproceduralCFG
-import heros.solver.IFDSSolver
+import me.valer.ktlibminer.CreatorICFG
 import org.junit.jupiter.api.Test
 import soot.*
 import soot.Unit
+import soot.jimple.internal.InvokeExprBox
+import soot.jimple.internal.JInvokeStmt
 import soot.jimple.toolkits.callgraph.CallGraph
-import soot.jimple.toolkits.ide.exampleproblems.IFDSLocalInfoFlow
-import soot.jimple.toolkits.ide.exampleproblems.IFDSReachingDefinitions
-import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG
+import soot.jimple.toolkits.callgraph.Sources
+import soot.jimple.toolkits.callgraph.Targets
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG
-import soot.options.Options
 import soot.util.dot.DotGraph
-import java.util.*
 
 
 class SootTests {
 
     var visited = ArrayList<Unit>()
+    val visited2 = HashMap<String, Boolean>()
     var icfg: InterproceduralCFG<Unit, SootMethod>? = null
     var argsList = ArrayList<String>()
     var dotIcfg: DotGraph? = null
+    val endNodesStack: ArrayDeque<MutableList<Unit>>? = ArrayDeque()
 
+    //@BeforeTest
+    fun addPack() {
+        PackManager.v().getPack("wjtp").add(Transform("wjtp.ifds", object : SceneTransformer() {
+            override fun internalTransform(phaseName: String?, options: MutableMap<String, String>?) {
+                if (Scene.v().hasMainClass()) {
+                    println(Scene.v().hasMainClass())
+                    var mainMethod: SootMethod? = null
+                    var mainClass = Scene.v().mainClass
+                    var mainMethodFlag = false
+                    for (sc: SootClass in Scene.v().classes) {
+                        if (sc.name == mainClass.toString()) {
+                            mainClass = sc
+                            println("All methods inside are: ")
+                            println(sc.methods.toString())
+                            for (methods: SootMethod in sc.methods) {
+                                if (methods.name == "main") {
+                                    mainMethod = methods
+                                    println("Main method found!. Terminating Search!")
+                                    mainMethodFlag = true
+                                    break
+                                }
+                            }
+                            if (mainMethodFlag) break
+                        }
+                    }
+                    Scene.v().entryPoints = arrayListOf(mainMethod)
+                    println("Entry Points are: ")
+                    icfg = JimpleBasedInterproceduralCFG()
+
+                    println(icfg!!.getStartPointsOf(mainMethod))
+                    val startPoint = icfg!!.getStartPointsOf(mainMethod).first()
+                    println("START POINT SET")
+                    println(icfg!!.getSuccsOf(startPoint))
+
+                    // System.out.println(icfg.getSuccsOf(startPoint));
+                    // G.v().out.println((mainClass.toString()))
+                    //if (startPoint != null) graphTraverse(startPoint, icfg!!)
+                    //println()
+                    //visit(Scene.v().callGraph, main_method!!)
+                } else println("Not a malware with main method")
+            }
+        }))
+    }
 
 //    @Test
 //    fun testGraphCall() {
@@ -141,7 +183,6 @@ class SootTests {
 
     @Test
     fun constructICFG() {
-        //for (Integer i = 0; i < 2; i++) {
         val classpath1 =
             "C:\\Users\\valer\\IdeaProjects\\forkfgtest\\01\\kotlin\\main\\me\\valer\\ktlibminer"
         val classpath = "C:\\Users\\valer\\IdeaProjects\\KtLibMiner\\build\\libs\\KtLibMiner-1.0-SNAPSHOT.jar"
@@ -223,8 +264,8 @@ class SootTests {
                     G.v().out.println(
                         (mainClass.toString())
                     )
-                    startPoint?.let { graphTraverse(it, icfg!!) }
-                    dotIcfg!!.plot(mainClass.toString())
+                    // startPoint?.let { graphTraverse(it, icfg!!) }
+                    // dotIcfg!!.plot(mainClass.toString())
                 } else {
                     println("Not a malware with Main method...!")
                 }
@@ -298,15 +339,6 @@ class SootTests {
                                 )
                                 icfg = JimpleBasedInterproceduralCFG()
 
-
-                                //val problem = IFDSReachingDefinitions(icfg)
-
-                                //val solver = IFDSSolver(problem)
-
-                                //println("Starting solver")
-                                //solver.solve()
-                                //println("Done")
-
                                 var startPoint: Unit? = null
                                 println(icfg!!.getStartPointsOf(main_method))
                                 for (temp in icfg!!.getStartPointsOf(main_method)) {
@@ -317,12 +349,12 @@ class SootTests {
                                 }
 
                                 // System.out.println(icfg.getSuccsOf(startPoint));
-                                val visited = ArrayList<Unit>()
                                 G.v().out.println(
                                     (mainClass.toString())
                                 )
-                                if (startPoint != null) graphTraverse(startPoint!!, icfg!!)
-                                dotIcfg!!.plot(mainClass.toString())
+                                // if (startPoint != null) graphTraverse(startPoint!!, icfg!!)
+                                //println()
+                                //visit(Scene.v().callGraph, main_method!!)
                             } else {
                                 println("Not a malware with main method")
                                 //G.reset();
@@ -342,22 +374,122 @@ class SootTests {
         dotIcfg!!.plot("testg.dot")
     }
 
-    fun graphTraverse(startPoint: Unit, n_icfg: InterproceduralCFG<Unit, SootMethod>) {
-        val currentSuccessors = n_icfg.getSuccsOf(startPoint)
+
+    @Test
+    fun testCreatorICFG() {
+        val classpath = "C:\\Users\\valer\\IdeaProjects\\KtLibMiner\\build\\libs\\KtLibMiner-1.0-SNAPSHOT.jar"
+        CreatorICFG.javaPaths = "C:/Program Files/Java/jdk1.8.0_261/jre/lib/rt.jar;"
+        CreatorICFG.getICFG(classpath)
+        //println(CreatorICFG.icfg)
+        //dotIcfg = DotGraph("")
+        // graphTraverse(CreatorICFG.startPoint, CreatorICFG.icfg)
+        // CreatorICFG.mainMethod?.let { visit(CreatorICFG.callGraph, it) }
+    }
+
+    fun graphTraverse(startPoint: Unit, icfg: InterproceduralCFG<Unit, SootMethod>?) {
+        val currentSuccessors = icfg!!.getSuccsOf(startPoint)
+        val tempMethods = icfg.getCalleesOfCallAt(startPoint)
+
+
+//        for (m in tempMethods) {
+//            println(m.declaringClass)
+//        }
         if (currentSuccessors.size == 0) {
             println("Traversal complete")
             return
         } else {
             for (succ in currentSuccessors) {
                 println("Succesor: $succ")
+                val useBoxes = succ.useBoxes
+                //println("useBoxes: $useBoxes")
+                try {
+                    if (succ is JInvokeStmt) {
+                        println(succ.invokeExpr.method)
+                    }
+                } catch (e: Exception) {
+                    println(e.message)
+                }
+
                 if (!visited.contains(succ)) {
                     dotIcfg!!.drawEdge(startPoint.toString(), succ.toString())
-                    visited.add(succ)
-                    graphTraverse(succ, n_icfg)
+                    visited.add(succ!!)
+                    graphTraverse(succ, icfg)
                 } else {
                     dotIcfg!!.drawEdge(startPoint.toString(), succ.toString())
                 }
             }
         }
     }
+
+    fun visit(cg: CallGraph, method: SootMethod) {
+        val identifier = method.signature
+        visited2[method.signature] = true
+        dotIcfg!!.drawNode(identifier)
+        // iterate over unvisited parents
+//        val ptargets = Sources(cg.edgesInto(method))
+//        while (ptargets.hasNext()) {
+//            val parent = ptargets.next() as SootMethod
+//            if (!visited2.containsKey(parent.signature)) visit(cg, parent)
+//        }
+        // iterate over unvisited children
+        val ctargets: Iterator<MethodOrMethodContext> = Targets(cg.edgesOutOf(method))
+        while (ctargets.hasNext()) {
+            val child = ctargets.next() as SootMethod
+
+            dotIcfg!!.drawEdge(identifier, child.signature)
+            println("$method may call $child")
+            if (!visited2.containsKey(child.signature)) visit(cg, child)
+
+        }
+    }
+
+//    fun graphTraverse2(startPoint: Unit, n_icfg: InterproceduralCFG<Unit, SootMethod>) {
+//        val currentSuccessors = n_icfg.getSuccsOf(startPoint)
+//        println("current start point:")
+//        println(startPoint)
+//        println("current successors:")
+//        println(currentSuccessors)
+//        if (currentSuccessors.size == 0) {
+//            if (endNodesStack.isNullOrEmpty()) {
+//                println("Traversal complete")
+//                return
+//            } else {
+//                val endNodes = endNodesStack.removeLast()
+//                endNodes.forEach { endNode ->
+//                    dotIcfg!!.drawEdge(startPoint.toString(), endNode.toString())
+//                    graphTraverse(endNode, n_icfg)
+//                }
+//                return
+//            }
+//        } else {
+//            val tempMethods =
+//                n_icfg.getCalleesOfCallAt(startPoint)
+//                    .filter { method -> Scene.v().mainClass.methods.contains(method) }
+//            if (tempMethods.isNotEmpty()) {
+//                println("Temp methods:")
+//                println(tempMethods)
+//                println(n_icfg.getCallersOf(tempMethods.first()))
+//                tempMethods.forEach { temp_method ->
+//                    val tempStartPoint = n_icfg.getStartPointsOf(temp_method).first()
+//                    dotIcfg!!.drawEdge(startPoint.toString(), tempStartPoint.toString())
+//                    visited.add(tempStartPoint)
+//                    endNodesStack!!.addLast(currentSuccessors)
+//                    graphTraverse(tempStartPoint, n_icfg)
+//                }
+//            } else {
+//                for (succ in currentSuccessors) {
+//                    println("Succesor: $succ")
+//                    if (!visited.contains(succ)) {
+//                        dotIcfg!!.drawEdge(startPoint.toString(), succ.toString())
+//                        visited.add(succ)
+//                        graphTraverse(succ, n_icfg)
+//                    } else {
+//                        dotIcfg!!.drawEdge(startPoint.toString(), succ.toString())
+//                        if (!endNodesStack.isNullOrEmpty()) graphTraverse(succ, n_icfg)
+//                    }
+//                }
+//            }
+//
+//        }
+//    }
 }

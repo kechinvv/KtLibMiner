@@ -42,7 +42,7 @@ class ProjectsSequence(val lib: String, val token: String) : Sequence<RemoteRepo
         return khttp.get(
             url = linkGH,
             params = mapOf(
-                "q" to "$lib in:file language:kotlin size:$lbound..$rbound",
+                "q" to "$lib in:file language:java size:$lbound..$rbound",
                 "per_page" to "100",
                 "page" to page.toString()
             ),

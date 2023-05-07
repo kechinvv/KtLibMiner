@@ -53,8 +53,13 @@ class ProjectsSequence(val lib: String, val token: String) : Sequence<RemoteRepo
     private fun getReps(json: JsonObject): List<RemoteRepository> {
         val reps = mutableListOf<RemoteRepository>()
         if (json.has("message"))
-            if (json.get("message").equals("Bad credentials")) throw Exception("Bad credentials")
-            else Thread.sleep(SLEEP)
+            if (json.get("message").toString() == "\"Bad credentials\"" ||
+                json.get("message").toString() == "Bad credentials"
+            ) throw Exception("Bad credentials")
+            else {
+                println(json.get("message"))
+                Thread.sleep(SLEEP)
+            }
         else if (json.get("total_count").asInt > maxRes && (rbound - lbound > 1)) rbound -= (rbound - lbound) / 2
         else {
             val items = json.getAsJsonArray("items")

@@ -56,7 +56,7 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
                 val build = it.newBuild()
                 build.forTasks("clean")
                 build.run()
-                build.forTasks("build")
+                build.forTasks("jar")
                 build.run()
             }
             true
@@ -73,7 +73,7 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
             v.setEnvironmentVariable("maven.multiModuleProjectDirectory", baseDir)
             if (maven_path != null) v.setLocalRepo(maven_path.toString())
             v.addCliArguments("clean")
-            v.addCliArguments("compile")
+            v.addCliArguments("package")
             v.execute()
             true
         } catch (e: Exception) {

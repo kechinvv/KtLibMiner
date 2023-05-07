@@ -40,7 +40,7 @@ class LocalRepository(val path: Path) {
             .filter { f: File -> f.isFile && f.name.endsWith(".kt") }.map { obj: File -> obj.absolutePath }
 
 
-    fun getICFG(): InterproceduralCFG<Unit, SootMethod>? {
+    fun runAnalyze(): InterproceduralCFG<Unit, SootMethod>? {
         icfg = CreatorICFG.getICFG(path.toString())
         return icfg
     }

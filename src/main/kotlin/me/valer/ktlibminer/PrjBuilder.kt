@@ -7,6 +7,9 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.name
+import kotlin.io.path.walk
 
 /***
  * With maven_path use installed maven, without maven_path use default path to maven
@@ -22,15 +25,21 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
 
     constructor(gradle_version: String) : this(null, null, gradle_version)
 
-    fun build(prj: LocalRepository): Boolean {
-        var successBuild = buildDir(prj.path)
-        if (!successBuild) successBuild = scanAndBuild(prj)
-        return successBuild
+    fun build(prj: LocalRepository): Path? {
+        var jarPath = findJar(prj.path).firstOrNull()
+        if (jarPath != null) {
+            var successBuild = buildDir(prj.path)
+            if (!successBuild) successBuild = scanAndBuild(prj)
+            if (successBuild) jarPath = findJar(prj.path).firstOrNull()
+        }
+        return jarPath
     }
 
     private fun buildDir(dir: Path): Boolean {
         return if (Files.exists(Paths.get("$dir/pom.xml"))) buildMaven(dir)
-        else if (Files.exists(Paths.get("$dir/build.gradle.kts")) || Files.exists(Paths.get("$dir/build.gradle"))) buildGradle(dir)
+        else if (Files.exists(Paths.get("$dir/build.gradle.kts")) || Files.exists(Paths.get("$dir/build.gradle"))) buildGradle(
+            dir
+        )
         else false
     }
 
@@ -79,6 +88,13 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
         } catch (e: Exception) {
             e.printStackTrace()
             false
+        }
+    }
+
+    @OptIn(ExperimentalPathApi::class)
+    private fun findJar(dir: Path): Sequence<Path> {
+        return dir.walk().filter {
+            it.name.endsWith(".jar")
         }
     }
 }

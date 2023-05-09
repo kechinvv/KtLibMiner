@@ -25,14 +25,14 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
 
     constructor(gradle_version: String) : this(null, null, gradle_version)
 
-    fun build(prj: LocalRepository): Path? {
-        var jarPath = findJar(prj.path).firstOrNull()
-        if (jarPath != null) {
+    fun build(prj: LocalRepository): List<Path> {
+        var jarPaths = findJar(prj.path).toList()
+        if (jarPaths.isEmpty()) {
             var successBuild = buildDir(prj.path)
             if (!successBuild) successBuild = scanAndBuild(prj)
-            if (successBuild) jarPath = findJar(prj.path).firstOrNull()
+            if (successBuild) jarPaths = findJar(prj.path).toList()
         }
-        return jarPath
+        return jarPaths
     }
 
     private fun buildDir(dir: Path): Boolean {

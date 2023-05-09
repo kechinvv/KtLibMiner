@@ -8,6 +8,7 @@ import soot.jimple.internal.JInvokeStmt
 import soot.jimple.internal.JimpleLocalBox
 import soot.jimple.spark.SparkTransformer
 import soot.jimple.spark.geom.geomPA.GeomPointsTo
+import soot.jimple.spark.pag.PAG
 import soot.jimple.toolkits.callgraph.CallGraph
 import soot.jimple.toolkits.callgraph.Targets
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG
@@ -23,21 +24,17 @@ object CreatorICFG {
     /**
      * For stable work need to set path to jt.jar manually
      **/
-    var javaPaths = ""
+    // var javaPaths = ""
     lateinit var startPoint: Unit
-    lateinit var callGraph: CallGraph
     var mainMethod: SootMethod? = null
 
 
-    var visited = ArrayList<Unit>()
-    var dotIcfg: DotGraph? = null
-    lateinit var analysis: PointsToAnalysis
-    lateinit var geomAnal: GeomPointsTo
+    lateinit var analysis: PAG
 
     init {
         val sep = File.separator
         val pathSep = File.pathSeparator
-        javaPaths = System.getProperty("java.home") + sep + "jre" + sep + "lib" + sep + "rt.jar" + pathSep
+        // javaPaths = System.getProperty("java.home") + sep + "jre" + sep + "lib" + sep + "rt.jar" + pathSep
         fulTrace = mutableListOf(mutableListOf())
 
         if (!PackManager.v().hasPack("wjtp.ifds")) PackManager.v().getPack("wjtp")
@@ -45,24 +42,17 @@ object CreatorICFG {
                 override fun internalTransform(phaseName: String?, options: MutableMap<String, String>?) {
                     if (Scene.v().hasMainClass()) {
                         println(Scene.v().hasMainClass())
-                        var mainClass = Scene.v().mainClass
-                        var mainMethodFlag = false
-                        for (sc: SootClass in Scene.v().classes) {
-                            if (sc.name == mainClass.toString()) {
-                                mainClass = sc
-                                println("All methods inside are: ")
-                                println(sc.methods.toString())
-                                for (methods: SootMethod in sc.methods) {
-                                    if (methods.name == "main") {
-                                        mainMethod = methods
-                                        println("Main method found!. Terminating Search!")
-                                        mainMethodFlag = true
-                                        break
-                                    }
-                                }
-                                if (mainMethodFlag) break
+                        val mainClass = Scene.v().mainClass
+                        println("All methods inside are: ")
+                        println(mainClass.methods.toString())
+                        for (methods: SootMethod in mainClass.methods) {
+                            if (methods.name == "main") {
+                                mainMethod = methods
+                                println("Main method found!. Terminating Search!")
+                                println(mainMethod)
                             }
                         }
+
                         Scene.v().entryPoints = arrayListOf(mainMethod)
                         println("Entry Points are: ")
                         icfg = JimpleBasedInterproceduralCFG()
@@ -75,8 +65,7 @@ object CreatorICFG {
                         graphTraverseLib(startPoint, icfg!!)
                         fulTrace = fulTrace.distinct() as MutableList<MutableList<Unit>>
                         fulTrace.forEach { println(it) }
-                        //sceneCollector.forEach { println(it) }
-                        val opt: MutableMap<String, String> = HashMap()
+//                        val opt: MutableMap<String, String> = HashMap()
 //                        opt["verbose"] = "true"
 //                        opt["propagator"] = "worklist"
 //                        opt["simple-edges-bidirectional"] = "false"
@@ -85,7 +74,7 @@ object CreatorICFG {
 //                        opt["double-set-old"] = "hybrid"
 //                        opt["double-set-new"] = "hybrid"
 //                        SparkTransformer.v().transform("", opt)
-                        analysis = Scene.v().pointsToAnalysis
+                        analysis = Scene.v().pointsToAnalysis as PAG
                         //geomAnal = analysis as GeomPointsTo
                         sequenceSelecting()
 
@@ -168,10 +157,9 @@ object CreatorICFG {
                 classpath,
                 "-p",
                 "cg.spark",
-                "enabled,verbose:true"
-                //"verbose:true,geom-pta:true"
+                "enabled:true,verbose:true"
             )
-            if (javaPaths.last().toString() != File.pathSeparator) javaPaths += File.pathSeparator
+            // if (javaPaths.last().toString() != File.pathSeparator) javaPaths += File.pathSeparator
             //Scene.v().sootClassPath = javaPaths + classpath
 
             Main.main(args)

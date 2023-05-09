@@ -378,7 +378,7 @@ class SootTests {
     @Test
     fun testCreatorICFG() {
         val classpath = "C:\\Users\\valer\\IdeaProjects\\libminer_test\\build\\libs\\libminer_test-1.0-SNAPSHOT.jar"
-        CreatorICFG.javaPaths = "C:/Program Files/Java/jdk1.8.0_261/jre/lib/rt.jar;"
+        // CreatorICFG.javaPaths = "C:/Program Files/Java/jdk1.8.0_261/jre/lib/rt.jar;"
         CreatorICFG.getICFG(classpath)
         //println(CreatorICFG.icfg)
         //dotIcfg = DotGraph("")

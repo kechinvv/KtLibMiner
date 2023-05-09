@@ -5,7 +5,9 @@ import soot.*
 import soot.Unit
 import soot.jimple.internal.JAssignStmt
 import soot.jimple.internal.JInvokeStmt
+import soot.jimple.internal.JimpleLocalBox
 import soot.jimple.spark.SparkTransformer
+import soot.jimple.spark.geom.geomPA.GeomPointsTo
 import soot.jimple.toolkits.callgraph.CallGraph
 import soot.jimple.toolkits.callgraph.Targets
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG
@@ -16,8 +18,7 @@ import java.io.File
 object CreatorICFG {
     var icfg: InterproceduralCFG<Unit, SootMethod>? = null
     val lib = "java.io.File"
-    val invSequnece = mutableListOf<Unit>()
-    val sceneCollector: MutableList<MutableList<Unit>> = mutableListOf()
+    var fulTrace = mutableListOf<MutableList<Unit>>(mutableListOf())
 
     /**
      * For stable work need to set path to jt.jar manually
@@ -30,11 +31,14 @@ object CreatorICFG {
 
     var visited = ArrayList<Unit>()
     var dotIcfg: DotGraph? = null
+    lateinit var analysis: PointsToAnalysis
+    lateinit var geomAnal: GeomPointsTo
 
     init {
         val sep = File.separator
         val pathSep = File.pathSeparator
         javaPaths = System.getProperty("java.home") + sep + "jre" + sep + "lib" + sep + "rt.jar" + pathSep
+        fulTrace = mutableListOf(mutableListOf())
 
         if (!PackManager.v().hasPack("wjtp.ifds")) PackManager.v().getPack("wjtp")
             .add(Transform("wjtp.ifds", object : SceneTransformer() {
@@ -67,222 +71,92 @@ object CreatorICFG {
                         startPoint = icfg!!.getStartPointsOf(mainMethod).first()
                         println("START POINT SET")
                         println(icfg!!.getSuccsOf(startPoint))
-                        // Scene.v().loadNecessaryClasses()
-                        callGraph = Scene.v().callGraph
-                        dotIcfg = DotGraph("")
-                        // visit(callGraph, mainMethod!!)
-                        // println(Scene.v().applicationClasses)
+
                         graphTraverseLib(startPoint, icfg!!)
-                        fulTrace.forEach{ println(it) }
+                        fulTrace = fulTrace.distinct() as MutableList<MutableList<Unit>>
+                        fulTrace.forEach { println(it) }
                         //sceneCollector.forEach { println(it) }
                         val opt: MutableMap<String, String> = HashMap()
-                        opt["verbose"] = "true"
-                        opt["propagator"] = "worklist"
-                        opt["simple-edges-bidirectional"] = "false"
-                        opt["on-fly-cg"] = "true"
-                        opt["set-impl"] = "double"
-                        opt["double-set-old"] = "hybrid"
-                        opt["double-set-new"] = "hybrid"
-                        SparkTransformer.v().transform("", opt)
-                        val analysis = Scene.v().pointsToAnalysis
-                        // println(analysis.reachingObjects())
-                        //dotIcfg!!.plot("testg.dot")
+//                        opt["verbose"] = "true"
+//                        opt["propagator"] = "worklist"
+//                        opt["simple-edges-bidirectional"] = "false"
+//                        opt["on-fly-cg"] = "true"
+//                        opt["set-impl"] = "double"
+//                        opt["double-set-old"] = "hybrid"
+//                        opt["double-set-new"] = "hybrid"
+//                        SparkTransformer.v().transform("", opt)
+                        analysis = Scene.v().pointsToAnalysis
+                        //geomAnal = analysis as GeomPointsTo
+                        sequenceSelecting()
+
                     } else println("Not a malware with main method")
                 }
             }))
     }
 
-    val fulTrace = mutableListOf<MutableList<Unit>>(mutableListOf())
+
+    fun sequenceSelecting() {
+        for (f_ind in 0 until fulTrace.size) {
+            for (t_ind in 0 until fulTrace[f_ind].size - 1) {
+                for (tp_ind in t_ind until fulTrace[f_ind].size) {
+//                    val obj1 =
+//                        if (fulTrace[f_ind][t_ind] is JInvokeStmt) (fulTrace[f_ind][t_ind] as JInvokeStmt).invokeExpr.useBoxes[0].value
+//                        else (fulTrace[f_ind][t_ind] as JAssignStmt).invokeExpr.useBoxes[0].value
+//                    val obj2 =
+//                        if (fulTrace[f_ind][tp_ind] is JInvokeStmt) (fulTrace[f_ind][tp_ind] as JInvokeStmt).invokeExpr.useBoxes[0].value
+//                        else (fulTrace[f_ind][tp_ind] as JAssignStmt).invokeExpr.useBoxes[0].value
+                    val obj1 = fulTrace[f_ind][t_ind]
+                    val obj2 = fulTrace[f_ind][tp_ind]
+                    val obj1PT =
+                        if (obj1 is JInvokeStmt) analysis.reachingObjects(obj1.invokeExpr.useBoxes[0].value as Local)
+                        else analysis.reachingObjects((obj1 as JAssignStmt).invokeExpr.useBoxes[0].value as Local)
+                    val obj2PT =
+                        if (obj2 is JInvokeStmt) analysis.reachingObjects(obj2.invokeExpr.useBoxes[0].value as Local)
+                        else analysis.reachingObjects((obj2 as JAssignStmt).invokeExpr.useBoxes[0].value as Local)
+                    println(obj1.toString() + " to " + obj2 + " = " + obj1PT.hasNonEmptyIntersection(obj2PT))
+                }
+            }
+        }
+    }
+
     fun graphTraverseLib(
         startPoint: Unit,
         icfg: InterproceduralCFG<Unit, SootMethod>?,
         ttl: Int = 220,
-        heads: MutableList<MutableList<Unit>> = mutableListOf(mutableListOf())
     ) {
         val currentSuccessors = icfg!!.getSuccsOf(startPoint)
         if (currentSuccessors.size == 0 || ttl <= 0) {
-            println("Traversal complete")
+            return
+            // println("Traversal complete")
         } else {
-            println("List of sucs: $currentSuccessors       len: ${currentSuccessors.size}")
+            //println("List of sucs: $currentSuccessors       len: ${currentSuccessors.size}")
             val traceOrig = fulTrace.last().toMutableList()
             for (succ in currentSuccessors) {
-                println("Succesor: $succ        Class: ${succ.javaClass}")
+                // println("Succesor: $succ        Class: ${succ.javaClass}")
                 var method: SootMethod? = null
                 try {
                     if (succ is JInvokeStmt) {
-                        // println("Decl:" + (succ.invokeExpr.method.declaringClass))
                         if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
                             method = succ.invokeExpr.method
                         if (succ.invokeExpr.method.declaringClass.toString().startsWith(lib)) fulTrace.last().add(succ)
                     } else if (succ is JAssignStmt) {
-                        // println("??? " + succ.rightOp.type)
-                        // println("Decl:" + (succ.invokeExpr.method.declaringClass))
-                        // println("start method:")
-                        // println(icfg.getStartPointsOf(succ.invokeExpr.method))
                         if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
                             method = succ.invokeExpr.method
                         if (succ.invokeExpr.method.declaringClass.toString().startsWith(lib)) fulTrace.last().add(succ)
                     }
                     if (method != null) {
-                        println("METHOD ${method.name} IN")
                         val methodStart = icfg.getStartPointsOf(method).first()
-                        graphTraverseLib(methodStart, icfg, ttl - 1, heads)
-                        println("METHOD ${method.name} OUT")
+                        graphTraverseLib(methodStart, icfg, ttl - 1)
                     }
 
-                } catch (e: Exception) {
-                    println(e.message)
+                } catch (_: Exception) {
                 }
-                graphTraverseLib(succ, icfg, ttl, heads)
+                graphTraverseLib(succ, icfg, ttl)
                 if (currentSuccessors.indexOf(succ) != currentSuccessors.size - 1) fulTrace.add(traceOrig)
             }
         }
     }
 
-    fun graphTraverseLibOld(
-        startPoint: Unit,
-        icfg: InterproceduralCFG<Unit, SootMethod>?,
-        ttl: Int = 220,
-        heads: MutableList<MutableList<Unit>> = mutableListOf(mutableListOf())
-    ): MutableList<MutableList<Unit>> {
-        val currentSuccessors = icfg!!.getSuccsOf(startPoint)
-        if (currentSuccessors.size == 0 || ttl <= 0) {
-            for (head in heads) {
-                if (!sceneCollector.contains(head))
-                    sceneCollector.add(head.toMutableList())
-            }
-            println("Traversal complete")
-            return heads.toMutableList()
-        } else {
-            val copyHeads = heads.toMutableList()
-            println("List of sucs: $currentSuccessors       len: ${currentSuccessors.size}")
-            for (succ in currentSuccessors) {
-                println("Succesor: $succ        Class: ${succ.javaClass}")
-                var method: SootMethod? = null
-                var newHeads = heads.toMutableList()
-                val tempHeads = heads.toMutableList()
-                try {
-                    if (succ is JInvokeStmt) {
-                        // println("Decl:" + (succ.invokeExpr.method.declaringClass))
-                        if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
-                            method = succ.invokeExpr.method
-                        if (succ.invokeExpr.method.declaringClass.toString().startsWith(lib)) tempHeads.forEach {
-                            it.add(succ)
-                        }
-                    } else if (succ is JAssignStmt) {
-                        // println("??? " + succ.rightOp.type)
-                        // println("Decl:" + (succ.invokeExpr.method.declaringClass))
-                        // println("start method:")
-                        // println(icfg.getStartPointsOf(succ.invokeExpr.method))
-                        if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
-                            method = succ.invokeExpr.method
-                        if (succ.invokeExpr.method.declaringClass.toString().startsWith(lib)) tempHeads.forEach {
-                            it.add(succ)
-                        }
-                    }
-                    if (method != null) {
-                        println("METHOD ${method.name} IN")
-                        val methodStart = icfg.getStartPointsOf(method).first()
-                        newHeads = graphTraverseLibOld(methodStart, icfg, ttl - 1, tempHeads)
-                        println("METHOD ${method.name} OUT")
-                    } else newHeads = tempHeads.toMutableList()
-
-                } catch (e: Exception) {
-                    println(e.message)
-                }
-                graphTraverseLibOld(
-                    succ,
-                    icfg,
-                    ttl,
-                    newHeads
-                ).forEach { if (!copyHeads.contains(it)) copyHeads.add(it.toMutableList()) }
-            }
-            println("copySize: ${copyHeads.size}")
-            return copyHeads.toMutableList()
-        }
-    }
-
-    fun graphTraverseSimple(startPoint: Unit, icfg: InterproceduralCFG<Unit, SootMethod>?) {
-        val currentSuccessors = icfg!!.getSuccsOf(startPoint)
-        if (currentSuccessors.size == 0) {
-            println("Traversal complete")
-            return
-        } else {
-            for (succ in currentSuccessors) {
-                println("Succesor: $succ")
-                if (!visited.contains(succ)) {
-                    //dotIcfg!!.drawEdge(startPoint.toString(), succ.toString())
-                    visited.add(succ!!)
-                    graphTraverseSimple(succ, icfg)
-                } else {
-                    //dotIcfg!!.drawEdge(startPoint.toString(), succ.toString())
-                }
-            }
-        }
-    }
-
-    val visited2 = HashMap<String, Boolean>()
-    fun visit(cg: CallGraph, method: SootMethod) {
-        val identifier = method.signature
-        visited2[method.signature] = true
-        dotIcfg!!.drawNode(identifier)
-
-        val ctargets: Iterator<MethodOrMethodContext> = Targets(cg.edgesOutOf(method))
-        while (ctargets.hasNext()) {
-            val child = ctargets.next() as SootMethod
-            if (child.declaringClass in Scene.v().applicationClasses) {
-                dotIcfg!!.drawEdge(identifier, child.signature)
-                println("$method may call $child")
-                graphTraverseSimple(icfg!!.getStartPointsOf(child).first(), icfg)
-                if (!visited2.containsKey(child.signature)) visit(cg, child)
-            }
-
-        }
-    }
-
-    fun graphTraverse(startPoint: Unit, icfg: InterproceduralCFG<Unit, SootMethod>?, end_node: Unit? = null): Unit {
-        val currentSuccessors = icfg!!.getSuccsOf(startPoint)
-        if (currentSuccessors.size == 0) {
-            println("Traversal complete")
-            return startPoint
-        } else {
-            println(currentSuccessors)
-            for (succ in currentSuccessors) {
-                println("Succesor: $succ")
-                var method: SootMethod? = null
-                var methodEnd: Unit? = null
-                try {
-                    if (succ is JInvokeStmt) {
-                        if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
-                            method = succ.invokeExpr.method
-                    } else if (succ is JAssignStmt) {
-                        if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
-                            method = succ.invokeExpr.method
-                    }
-                    if (method != null) {
-                        val methodStart = icfg.getStartPointsOf(method).first()
-                        dotIcfg!!.drawEdge(succ.toString(), methodStart.toString())
-                        methodEnd = graphTraverse(methodStart, icfg)
-                    }
-                    //JGotoStmt
-                    //JIfStmt
-                } catch (e: Exception) {
-                    println(e.message)
-                }
-
-                if (!visited.contains(succ)) {
-                    if (end_node != null) dotIcfg!!.drawEdge(end_node.toString(), succ.toString())
-                    else dotIcfg!!.drawEdge(startPoint.toString(), succ.toString())
-                    visited.add(succ!!)
-                    if (methodEnd != null) graphTraverse(succ, icfg, methodEnd)
-                    else graphTraverse(succ, icfg)
-                } else {
-                    dotIcfg!!.drawEdge(startPoint.toString(), succ.toString())
-                }
-            }
-        }
-        return startPoint
-    }
 
     fun getICFG(classpath: String): InterproceduralCFG<Unit, SootMethod>? {
         try {
@@ -291,10 +165,14 @@ object CreatorICFG {
                 "-pp",
                 "-allow-phantom-refs",
                 "-process-dir",
-                classpath
+                classpath,
+                "-p",
+                "cg.spark",
+                "enabled,verbose:true"
+                //"verbose:true,geom-pta:true"
             )
             if (javaPaths.last().toString() != File.pathSeparator) javaPaths += File.pathSeparator
-            Scene.v().sootClassPath = javaPaths + classpath
+            //Scene.v().sootClassPath = javaPaths + classpath
 
             Main.main(args)
             G.reset()

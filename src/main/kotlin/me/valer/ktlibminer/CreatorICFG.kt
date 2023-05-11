@@ -5,21 +5,16 @@ import soot.*
 import soot.Unit
 import soot.jimple.internal.JAssignStmt
 import soot.jimple.internal.JInvokeStmt
-import soot.jimple.internal.JimpleLocalBox
-import soot.jimple.spark.SparkTransformer
-import soot.jimple.spark.geom.geomPA.GeomPointsTo
 import soot.jimple.spark.pag.PAG
-import soot.jimple.toolkits.callgraph.CallGraph
-import soot.jimple.toolkits.callgraph.Targets
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG
-import soot.util.dot.DotGraph
 import java.io.File
 
 
 object CreatorICFG {
     var icfg: InterproceduralCFG<Unit, SootMethod>? = null
     val lib = "java.io.File"
-    var fulTrace = mutableListOf<MutableList<Unit>>(mutableListOf())
+    var allFullTraces = mutableListOf<MutableList<Unit>>(mutableListOf())
+    var extractedTraces: List<List<Unit>> = mutableListOf(mutableListOf())
 
     /**
      * For stable work need to set path to jt.jar manually
@@ -35,7 +30,7 @@ object CreatorICFG {
         val sep = File.separator
         val pathSep = File.pathSeparator
         // javaPaths = System.getProperty("java.home") + sep + "jre" + sep + "lib" + sep + "rt.jar" + pathSep
-        fulTrace = mutableListOf(mutableListOf())
+        allFullTraces = mutableListOf(mutableListOf())
 
         if (!PackManager.v().hasPack("wjtp.ifds")) PackManager.v().getPack("wjtp")
             .add(Transform("wjtp.ifds", object : SceneTransformer() {
@@ -63,8 +58,8 @@ object CreatorICFG {
                         println(icfg!!.getSuccsOf(startPoint))
 
                         graphTraverseLib(startPoint, icfg!!)
-                        fulTrace = fulTrace.distinct() as MutableList<MutableList<Unit>>
-                        fulTrace.forEach { println(it) }
+                        allFullTraces = allFullTraces.distinct() as MutableList<MutableList<Unit>>
+                        allFullTraces.forEach { println(it) }
 //                        val opt: MutableMap<String, String> = HashMap()
 //                        opt["verbose"] = "true"
 //                        opt["propagator"] = "worklist"
@@ -76,37 +71,67 @@ object CreatorICFG {
 //                        SparkTransformer.v().transform("", opt)
                         analysis = Scene.v().pointsToAnalysis as PAG
                         //geomAnal = analysis as GeomPointsTo
-                        sequenceSelecting()
+                        extractedTraces = sequenceExtracting(allFullTraces).filter { it.size > 1 }
+                        extractedTraces.forEach { println(it) }
 
                     } else println("Not a malware with main method")
                 }
             }))
     }
 
+    fun sequenceExtracting(allTraces: List<List<Unit>>): MutableList<MutableList<Unit>> {
+        val extractedTracesRet = mutableListOf<MutableList<Unit>>(mutableListOf())
+        for (f_ind in allTraces.indices) {
+            if (allTraces[f_ind].size < 2) continue
+            val traceCopy = allTraces[f_ind].toMutableList()
+            while (traceCopy.size > 1) {
+                var collector = mutableListOf<Unit>()
+                val firstCallInd = 0
+                var secondCallInd = 1
+                var obj1 = traceCopy[firstCallInd]
+                var obj2 = traceCopy[secondCallInd]
+                while (traceCopy.size > 1) {
 
-    fun sequenceSelecting() {
-        for (f_ind in 0 until fulTrace.size) {
-            for (t_ind in 0 until fulTrace[f_ind].size - 1) {
-                for (tp_ind in t_ind until fulTrace[f_ind].size) {
-//                    val obj1 =
-//                        if (fulTrace[f_ind][t_ind] is JInvokeStmt) (fulTrace[f_ind][t_ind] as JInvokeStmt).invokeExpr.useBoxes[0].value
-//                        else (fulTrace[f_ind][t_ind] as JAssignStmt).invokeExpr.useBoxes[0].value
-//                    val obj2 =
-//                        if (fulTrace[f_ind][tp_ind] is JInvokeStmt) (fulTrace[f_ind][tp_ind] as JInvokeStmt).invokeExpr.useBoxes[0].value
-//                        else (fulTrace[f_ind][tp_ind] as JAssignStmt).invokeExpr.useBoxes[0].value
-                    val obj1 = fulTrace[f_ind][t_ind]
-                    val obj2 = fulTrace[f_ind][tp_ind]
                     val obj1PT =
                         if (obj1 is JInvokeStmt) analysis.reachingObjects(obj1.invokeExpr.useBoxes[0].value as Local)
                         else analysis.reachingObjects((obj1 as JAssignStmt).invokeExpr.useBoxes[0].value as Local)
                     val obj2PT =
                         if (obj2 is JInvokeStmt) analysis.reachingObjects(obj2.invokeExpr.useBoxes[0].value as Local)
                         else analysis.reachingObjects((obj2 as JAssignStmt).invokeExpr.useBoxes[0].value as Local)
-                    println(obj1.toString() + " to " + obj2 + " = " + obj1PT.hasNonEmptyIntersection(obj2PT))
+
+                    val pointsTo = obj1PT.hasNonEmptyIntersection(obj2PT)
+
+                    println("$obj1 to $obj2 = $pointsTo")
+
+                    if (pointsTo) {
+                        collector.add(obj1)
+                        traceCopy.remove(obj1)
+                        obj1 = obj2
+                        secondCallInd--
+                    }
+                    if (secondCallInd >= traceCopy.size - 1) {
+                        collector.add(obj1)
+                        traceCopy.remove(obj1)
+
+                        extractedTracesRet.add(collector)
+                        collector = mutableListOf()
+                        if (traceCopy.size > 1) {
+                            obj1 = traceCopy[firstCallInd]
+                            secondCallInd = firstCallInd + 1
+                            obj2 = traceCopy[secondCallInd]
+                        }
+                    } else {
+                        secondCallInd++
+                        obj2 = traceCopy[secondCallInd]
+                    }
                 }
             }
+
         }
+
+        return extractedTracesRet
     }
+
 
     fun graphTraverseLib(
         startPoint: Unit,
@@ -119,7 +144,7 @@ object CreatorICFG {
             // println("Traversal complete")
         } else {
             //println("List of sucs: $currentSuccessors       len: ${currentSuccessors.size}")
-            val traceOrig = fulTrace.last().toMutableList()
+            val traceOrig = allFullTraces.last().toMutableList()
             for (succ in currentSuccessors) {
                 // println("Succesor: $succ        Class: ${succ.javaClass}")
                 var method: SootMethod? = null
@@ -127,11 +152,13 @@ object CreatorICFG {
                     if (succ is JInvokeStmt) {
                         if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
                             method = succ.invokeExpr.method
-                        if (succ.invokeExpr.method.declaringClass.toString().startsWith(lib)) fulTrace.last().add(succ)
+                        if (succ.invokeExpr.method.declaringClass.toString().startsWith(lib)) allFullTraces.last()
+                            .add(succ)
                     } else if (succ is JAssignStmt) {
                         if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
                             method = succ.invokeExpr.method
-                        if (succ.invokeExpr.method.declaringClass.toString().startsWith(lib)) fulTrace.last().add(succ)
+                        if (succ.invokeExpr.method.declaringClass.toString().startsWith(lib)) allFullTraces.last()
+                            .add(succ)
                     }
                     if (method != null) {
                         val methodStart = icfg.getStartPointsOf(method).first()
@@ -141,7 +168,7 @@ object CreatorICFG {
                 } catch (_: Exception) {
                 }
                 graphTraverseLib(succ, icfg, ttl)
-                if (currentSuccessors.indexOf(succ) != currentSuccessors.size - 1) fulTrace.add(traceOrig)
+                if (currentSuccessors.indexOf(succ) != currentSuccessors.size - 1) allFullTraces.add(traceOrig)
             }
         }
     }
@@ -168,6 +195,35 @@ object CreatorICFG {
         } catch (e: Exception) {
             e.printStackTrace()
             return null
+        }
+    }
+
+    fun sequenceSelectingTest() {
+        for (f_ind in 0 until allFullTraces.size) {
+            for (t_ind in 0 until allFullTraces[f_ind].size - 1) {
+                for (tp_ind in t_ind + 1 until allFullTraces[f_ind].size) {
+
+                    val obj1 = allFullTraces[f_ind][t_ind]
+                    val obj2 = allFullTraces[f_ind][tp_ind]
+
+                    val obj1PT =
+                        if (obj1 is JInvokeStmt) analysis.reachingObjects(obj1.invokeExpr.useBoxes[0].value as Local)
+                        else analysis.reachingObjects((obj1 as JAssignStmt).invokeExpr.useBoxes[0].value as Local)
+                    val obj2PT =
+                        if (obj2 is JInvokeStmt) analysis.reachingObjects(obj2.invokeExpr.useBoxes[0].value as Local)
+                        else analysis.reachingObjects((obj2 as JAssignStmt).invokeExpr.useBoxes[0].value as Local)
+                    println(obj1.toString() + " to " + obj2 + " = " + obj1PT.hasNonEmptyIntersection(obj2PT))
+                    if (obj1 is JInvokeStmt) {
+                        println(obj1.invokeExpr.method.declaringClass)
+                        println(obj1.invokeExpr.method.returnType)
+                        println(obj1.invokeExpr.method.signature)
+                    } else {
+                        println((obj1 as JAssignStmt).invokeExpr.method.declaringClass)
+                        println(obj1.invokeExpr.method.returnType)
+                        println(obj1.invokeExpr.method.signature)
+                    }
+                }
+            }
         }
     }
 }

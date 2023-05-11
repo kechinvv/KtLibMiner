@@ -7,19 +7,14 @@ import soot.jimple.internal.JAssignStmt
 import soot.jimple.internal.JInvokeStmt
 import soot.jimple.spark.pag.PAG
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG
-import java.io.File
 
 
-object CreatorICFG {
+object SceneExtractor {
     var icfg: InterproceduralCFG<Unit, SootMethod>? = null
-    val lib = "java.io.File"
+    var lib = "java.io.File"
     var allFullTraces = mutableListOf<MutableList<Unit>>(mutableListOf())
     var extractedTraces: List<List<Unit>> = mutableListOf(mutableListOf())
 
-    /**
-     * For stable work need to set path to jt.jar manually
-     **/
-    // var javaPaths = ""
     lateinit var startPoint: Unit
     var mainMethod: SootMethod? = null
 
@@ -27,9 +22,7 @@ object CreatorICFG {
     lateinit var analysis: PAG
 
     init {
-        val sep = File.separator
-        val pathSep = File.pathSeparator
-        // javaPaths = System.getProperty("java.home") + sep + "jre" + sep + "lib" + sep + "rt.jar" + pathSep
+
         allFullTraces = mutableListOf(mutableListOf())
 
         if (!PackManager.v().hasPack("wjtp.ifds")) PackManager.v().getPack("wjtp")
@@ -60,17 +53,8 @@ object CreatorICFG {
                         graphTraverseLib(startPoint, icfg!!)
                         allFullTraces = allFullTraces.distinct() as MutableList<MutableList<Unit>>
                         allFullTraces.forEach { println(it) }
-//                        val opt: MutableMap<String, String> = HashMap()
-//                        opt["verbose"] = "true"
-//                        opt["propagator"] = "worklist"
-//                        opt["simple-edges-bidirectional"] = "false"
-//                        opt["on-fly-cg"] = "true"
-//                        opt["set-impl"] = "double"
-//                        opt["double-set-old"] = "hybrid"
-//                        opt["double-set-new"] = "hybrid"
-//                        SparkTransformer.v().transform("", opt)
+
                         analysis = Scene.v().pointsToAnalysis as PAG
-                        //geomAnal = analysis as GeomPointsTo
                         extractedTraces = sequenceExtracting(allFullTraces).filter { it.size > 1 }
                         extractedTraces.forEach { println(it) }
 
@@ -101,7 +85,7 @@ object CreatorICFG {
 
                     val pointsTo = obj1PT.hasNonEmptyIntersection(obj2PT)
 
-                    println("$obj1 to $obj2 = $pointsTo")
+                    // println("$obj1 to $obj2 = $pointsTo")
 
                     if (pointsTo) {
                         collector.add(obj1)
@@ -174,7 +158,7 @@ object CreatorICFG {
     }
 
 
-    fun getICFG(classpath: String): InterproceduralCFG<Unit, SootMethod>? {
+    fun runAnalyze(classpath: String): Boolean {
         try {
             val args = arrayOf(
                 "-w",
@@ -186,15 +170,12 @@ object CreatorICFG {
                 "cg.spark",
                 "enabled:true,verbose:true"
             )
-            // if (javaPaths.last().toString() != File.pathSeparator) javaPaths += File.pathSeparator
-            //Scene.v().sootClassPath = javaPaths + classpath
-
             Main.main(args)
             G.reset()
-            return icfg
+            return true
         } catch (e: Exception) {
             e.printStackTrace()
-            return null
+            return false
         }
     }
 

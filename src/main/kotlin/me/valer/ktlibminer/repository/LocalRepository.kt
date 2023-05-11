@@ -1,8 +1,7 @@
 package me.valer.ktlibminer.repository
 
 import heros.InterproceduralCFG
-import me.valer.ktlibminer.CreatorICFG
-import org.vorpal.research.kfg.visitor.*
+import me.valer.ktlibminer.SceneExtractor
 import soot.*
 import soot.Unit
 import java.io.File
@@ -13,7 +12,6 @@ import java.util.stream.Stream
 
 
 class LocalRepository(val path: Path) {
-    var icfg: InterproceduralCFG<Unit, SootMethod>? = null
 
     @Throws(IOException::class)
     fun delete() {
@@ -40,8 +38,8 @@ class LocalRepository(val path: Path) {
             .filter { f: File -> f.isFile && f.name.endsWith(".kt") }.map { obj: File -> obj.absolutePath }
 
 
-    fun runAnalyze(): InterproceduralCFG<Unit, SootMethod>? {
-        icfg = CreatorICFG.getICFG(path.toString())
+    fun runAnalyze(): Boolean {
+        val icfg = SceneExtractor.runAnalyze(path.toString())
         return icfg
     }
 }

@@ -24,7 +24,7 @@ repositories {
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.7.20")
     implementation("khttp:khttp:0.1.0")
-    implementation("com.google.code.gson:gson:2.10")
+    implementation("com.google.code.gson:gson:2.10.1")
 
     implementation("org.gradle:gradle-tooling-api:$toolingApiVersion")
     implementation("org.apache.maven.shared:maven-verifier:2.0.0-M1")

@@ -33,14 +33,12 @@ class RemoteRepository() {
             url = "https://api.github.com/repos/$name/releases/latest",
             headers = mapOf("Authorization" to "Bearer $token", "Accept" to "application/vnd.github+json")
         ).text
-        println(response)
         val json = JsonParser.parseString(response).asJsonObject
         if (json.has("assets")) {
             val jsonAssets = json.getAsJsonArray("assets")
             for (asset in jsonAssets) {
                 if ((asset as JsonObject).has("browser_download_url")) {
                     val downloadLink = asset.get("browser_download_url").toString().drop(1).dropLast(1)
-                    println(downloadLink)
                     if (downloadLink.endsWith(".jar")) return downloadLink
                 }
             }

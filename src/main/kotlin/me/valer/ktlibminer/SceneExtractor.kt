@@ -1,6 +1,8 @@
 package me.valer.ktlibminer
 
 import heros.InterproceduralCFG
+import me.valer.ktlibminer.db.DatabaseController
+import me.valer.ktlibminer.db.Jsonator
 import soot.*
 import soot.Unit
 import soot.jimple.internal.JAssignStmt
@@ -56,8 +58,14 @@ object SceneExtractor {
 
                         analysis = Scene.v().pointsToAnalysis as PAG
                         extractedTraces = sequenceExtracting(allFullTraces).filter { it.size > 1 }
-                        extractedTraces.forEach { println(it) }
-
+                        extractedTraces.forEach {
+                            val indicator = it.first()
+                            val inpClass =
+                                if (indicator is JInvokeStmt) indicator.invokeExpr.method.declaringClass.toString()
+                                else (indicator as JAssignStmt).invokeExpr.method.declaringClass.toString()
+                            val jsonData = Jsonator.traceToJson(it)
+                            DatabaseController.addData(jsonData!!, inpClass)
+                        }
                     } else println("Not a malware with main method")
                 }
             }))

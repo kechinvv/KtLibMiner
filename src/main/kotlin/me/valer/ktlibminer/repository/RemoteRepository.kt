@@ -1,13 +1,11 @@
 package me.valer.ktlibminer.repository
 
-import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import java.io.*
 import java.net.URL
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.zip.ZipFile
 import kotlin.io.path.Path
 
@@ -17,6 +15,8 @@ class RemoteRepository() {
     lateinit var name: String
 
     private val defaultZipName = "project.zip"
+    private val defaultJarName = "project.zip"
+
 
     constructor(url: String, name: String) : this() {
         this.url = url.replace("\"", "")
@@ -28,20 +28,26 @@ class RemoteRepository() {
         this.name = repoJSON.get("full_name").toString().replace("\"", "")
     }
 
-    private fun getAssets(token: String): String? {
+    fun getAssets(token: String): String? {
         val response = khttp.get(
             url = "https://api.github.com/repos/$name/releases/latest",
             headers = mapOf("Authorization" to "Bearer $token", "Accept" to "application/vnd.github+json")
         ).text
+        println(response)
         val json = JsonParser.parseString(response).asJsonObject
-        if (json.has("zipball_url")) {
-            val zipUrl = json.get("zipball_url").toString().drop(1).dropLast(1)
-            val zipBytes = URL(zipUrl).readBytes()
-            val zipFile = File(defaultZipName)
-            zipFile.createNewFile()
-            zipFile.writeBytes(zipBytes)
-            return zipUrl
-        } else return null
+        if (json.has("assets")) {
+            val jsonAssets = json.getAsJsonArray("assets")
+            for (asset in jsonAssets) {
+                if ((asset as JsonObject).has("browser_download_url")) {
+                    val downloadLink = asset.get("browser_download_url").toString().drop(1).dropLast(1)
+                    println(downloadLink)
+                    if (downloadLink.endsWith(".jar")) return downloadLink
+                }
+            }
+        }
+        return if (json.has("zipball_url")) {
+            json.get("zipball_url").toString().drop(1).dropLast(1)
+        } else null
     }
 
     override fun toString(): String {
@@ -51,16 +57,20 @@ class RemoteRepository() {
 
     @Throws(InterruptedException::class, IOException::class)
     fun cloneTo(path: Path, token: String): LocalRepository {
-        val zipUrl = getAssets(token)
-        if (zipUrl != null) {
+        val downloadURL = getAssets(token)
+        if (downloadURL != null) {
             Files.createDirectories(path)
-            val zipBytes = URL(zipUrl).readBytes()
-            val zipFileName = "$path/$defaultZipName"
-            val zipFile = File(zipFileName)
-            zipFile.createNewFile()
-            zipFile.writeBytes(zipBytes)
-            unzip(zipFileName, path.toString())
-            Files.delete(Path(zipFileName))
+            val fileBytes = URL(downloadURL).readBytes()
+            var remoteName = downloadURL.split('/').last()
+            if (!downloadURL.endsWith(".jar")) remoteName += ".zip"
+            val fileName = "$path/$remoteName"
+            val file = File(fileName)
+            file.createNewFile()
+            file.writeBytes(fileBytes)
+            if (!downloadURL.endsWith(".jar")) {
+                unzip(fileName, path.toString())
+                Files.delete(Path(fileName))
+            }
         } else {
             val proc = ProcessBuilder("git", "clone", "--depth=1", "--recurse-submodules", url, path.toString()).start()
             proc.waitFor()

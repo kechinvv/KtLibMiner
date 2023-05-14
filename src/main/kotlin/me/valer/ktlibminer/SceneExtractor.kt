@@ -1,8 +1,8 @@
 package me.valer.ktlibminer
 
 import heros.InterproceduralCFG
-import me.valer.ktlibminer.db.DatabaseController
-import me.valer.ktlibminer.db.Jsonator
+import me.valer.ktlibminer.storage.DatabaseController
+import me.valer.ktlibminer.storage.Jsonator
 import soot.*
 import soot.Unit
 import soot.jimple.internal.JAssignStmt
@@ -40,19 +40,20 @@ object SceneExtractor {
                                 mainMethod = methods
                                 println("Main method found!. Terminating Search!")
                                 println(mainMethod)
+                                break
                             }
                         }
 
                         Scene.v().entryPoints = arrayListOf(mainMethod)
-                        println("Entry Points are: ")
                         icfg = JimpleBasedInterproceduralCFG()
 
+                        println("Entry Points are: ")
                         println(icfg!!.getStartPointsOf(mainMethod))
                         startPoint = icfg!!.getStartPointsOf(mainMethod).first()
                         println("START POINT SET")
                         println(icfg!!.getSuccsOf(startPoint))
 
-                        graphTraverseLib(startPoint, icfg!!)
+                        graphTraverseLib(startPoint)
                         allFullTraces = allFullTraces.distinct() as MutableList<MutableList<Unit>>
                         allFullTraces.forEach { println(it) }
 
@@ -84,18 +85,14 @@ object SceneExtractor {
                 var obj2 = traceCopy[secondCallInd]
                 while (traceCopy.size > 1) {
 
-                    val obj1PT =
-                        if (obj1 is JInvokeStmt) analysis.reachingObjects(obj1.invokeExpr.useBoxes[0].value as Local)
-                        else analysis.reachingObjects((obj1 as JAssignStmt).invokeExpr.useBoxes[0].value as Local)
-                    val obj2PT =
-                        if (obj2 is JInvokeStmt) analysis.reachingObjects(obj2.invokeExpr.useBoxes[0].value as Local)
-                        else analysis.reachingObjects((obj2 as JAssignStmt).invokeExpr.useBoxes[0].value as Local)
+                    val obj1PT = getPointsTo(obj1)
+                    val obj2PT = getPointsTo(obj2)
 
-                    val pointsTo = obj1PT.hasNonEmptyIntersection(obj2PT)
+                    val resAlias = obj1PT.hasNonEmptyIntersection(obj2PT)
 
-                    // println("$obj1 to $obj2 = $pointsTo")
+                    // println("$obj1 to $obj2 = $resAlias")
 
-                    if (pointsTo) {
+                    if (resAlias) {
                         collector.add(obj1)
                         traceCopy.remove(obj1)
                         obj1 = obj2
@@ -120,15 +117,14 @@ object SceneExtractor {
             }
 
         }
-
         return extractedTracesRet
     }
 
 
+
     fun graphTraverseLib(
         startPoint: Unit,
-        icfg: InterproceduralCFG<Unit, SootMethod>?,
-        ttl: Int = 220,
+        ttl: Int = 100,
     ) {
         val currentSuccessors = icfg!!.getSuccsOf(startPoint)
         if (currentSuccessors.size == 0 || ttl <= 0) {
@@ -153,13 +149,13 @@ object SceneExtractor {
                             .add(succ)
                     }
                     if (method != null) {
-                        val methodStart = icfg.getStartPointsOf(method).first()
-                        graphTraverseLib(methodStart, icfg, ttl - 1)
+                        val methodStart = icfg!!.getStartPointsOf(method).first()
+                        graphTraverseLib(methodStart, ttl - 1)
                     }
 
                 } catch (_: Exception) {
                 }
-                graphTraverseLib(succ, icfg, ttl)
+                graphTraverseLib(succ, ttl)
                 if (currentSuccessors.indexOf(succ) != currentSuccessors.size - 1) allFullTraces.add(traceOrig)
             }
         }
@@ -187,32 +183,8 @@ object SceneExtractor {
         }
     }
 
-    fun sequenceSelectingTest() {
-        for (f_ind in 0 until allFullTraces.size) {
-            for (t_ind in 0 until allFullTraces[f_ind].size - 1) {
-                for (tp_ind in t_ind + 1 until allFullTraces[f_ind].size) {
-
-                    val obj1 = allFullTraces[f_ind][t_ind]
-                    val obj2 = allFullTraces[f_ind][tp_ind]
-
-                    val obj1PT =
-                        if (obj1 is JInvokeStmt) analysis.reachingObjects(obj1.invokeExpr.useBoxes[0].value as Local)
-                        else analysis.reachingObjects((obj1 as JAssignStmt).invokeExpr.useBoxes[0].value as Local)
-                    val obj2PT =
-                        if (obj2 is JInvokeStmt) analysis.reachingObjects(obj2.invokeExpr.useBoxes[0].value as Local)
-                        else analysis.reachingObjects((obj2 as JAssignStmt).invokeExpr.useBoxes[0].value as Local)
-                    println(obj1.toString() + " to " + obj2 + " = " + obj1PT.hasNonEmptyIntersection(obj2PT))
-                    if (obj1 is JInvokeStmt) {
-                        println(obj1.invokeExpr.method.declaringClass)
-                        println(obj1.invokeExpr.method.returnType)
-                        println(obj1.invokeExpr.method.signature)
-                    } else {
-                        println((obj1 as JAssignStmt).invokeExpr.method.declaringClass)
-                        println(obj1.invokeExpr.method.returnType)
-                        println(obj1.invokeExpr.method.signature)
-                    }
-                }
-            }
-        }
+    private fun getPointsTo(stmt: Unit): PointsToSet {
+        return if (stmt is JInvokeStmt) analysis.reachingObjects(stmt.invokeExpr.useBoxes[0].value as Local)
+        else analysis.reachingObjects((stmt as JAssignStmt).invokeExpr.useBoxes[0].value as Local)
     }
 }

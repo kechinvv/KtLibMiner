@@ -1,4 +1,4 @@
-package me.valer.ktlibminer.db
+package me.valer.ktlibminer.storage
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder

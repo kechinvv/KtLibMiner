@@ -1,4 +1,4 @@
-package me.valer.ktlibminer.db
+package me.valer.ktlibminer.storage
 
 import soot.Unit
 import soot.jimple.internal.JAssignStmt

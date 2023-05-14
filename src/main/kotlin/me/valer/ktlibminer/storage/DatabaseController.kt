@@ -1,4 +1,4 @@
-package me.valer.ktlibminer.db
+package me.valer.ktlibminer.storage
 
 import java.sql.DriverManager
 import kotlin.math.sqrt
@@ -63,23 +63,31 @@ object DatabaseController {
     }
 
     fun clearError(): Boolean {
-        DriverManager.getConnection(dbUri).use { conn ->
-            val stmt = conn.createStatement()
-            val dsp =
-                stmt.executeQuery(
-                    "select (AVG(samples*samples) - AVG(samples)*AVG(samples)) as var from sequences"
-                )
-            var d: Double? = null
-            var m: Double? = null
-            if (dsp.next()) d = sqrt(dsp.getDouble("var")) * 3
-            val res2 = stmt.executeQuery("select AVG(samples) as var from sequences")
-            if (res2.next()) m = dsp.getDouble("var")
-            val stmtDel = conn.prepareStatement("delete from sequences where samples < ?")
-            if (m != null && d != null) {
-                stmtDel.setDouble(1, m - d)
-                stmtDel.execute()
-                return true
-            } else return false
+        val classes = getClasses()
+        println(classes)
+        for (cls in classes) {
+            DriverManager.getConnection(dbUri).use { conn ->
+                val stmtD =
+                    conn.prepareStatement("select (AVG(samples*samples) - AVG(samples)*AVG(samples)) as disp from sequences where class = ?")
+                stmtD.setString(1, cls)
+                val dsp = stmtD.executeQuery()
+                var d: Double? = null
+                var m: Double? = null
+                if (dsp.next()) d = sqrt(dsp.getDouble("disp")) * 3
+                val stmtM = conn.prepareStatement("select AVG(samples) as mean from sequences where class = ?")
+                stmtM.setString(1, cls)
+                val mean = stmtM.executeQuery()
+                if (mean.next()) m = mean.getDouble("mean")
+                val stmtDel = conn.prepareStatement("delete from sequences where class = ? and samples < ?")
+                if (m != null && d != null) {
+                    println(m)
+                    println(d)
+                    stmtDel.setString(1, cls)
+                    stmtDel.setDouble(2, m - d)
+                    stmtDel.execute()
+                } else return false
+            }
         }
+        return true
     }
 }

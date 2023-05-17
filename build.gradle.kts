@@ -17,7 +17,7 @@ repositories {
     maven("https://maven.vorpal-research.science")
     maven { url = uri("https://jcenter.bintray.com/") }
     maven { url = uri("https://repo.gradle.org/gradle/libs-releases") }
-    maven{ url = uri("https://oss.sonatype.org/content/repositories/snapshots")}
+    maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots") }
     google()
 }
 
@@ -29,14 +29,17 @@ dependencies {
     implementation("org.gradle:gradle-tooling-api:$toolingApiVersion")
     implementation("org.apache.maven.shared:maven-verifier:2.0.0-M1")
     implementation("org.soot-oss:soot:4.4.0-SNAPSHOT")
-   // implementation("de.upb.cs.swt:heros:1.2.3")
+    // implementation("de.upb.cs.swt:heros:1.2.3")
 
     implementation("org.xerial:sqlite-jdbc:3.41.2.1")
-
 
     testImplementation(kotlin("test"))
 
     runtimeOnly("org.slf4j:slf4j-simple:2.0.4")
+
+    implementation(files("libs/mint-core-1.0.0-jar-with-dependencies.jar"))
+    implementation(files("libs/mint-inference-1.2.0-jar-with-dependencies.jar"))
+    implementation(files("libs/mint-testgen-1.1.0-jar-with-dependencies.jar"))
 }
 
 

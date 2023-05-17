@@ -65,7 +65,8 @@ object SceneExtractor {
                                 if (indicator is JInvokeStmt) indicator.invokeExpr.method.declaringClass.toString()
                                 else (indicator as JAssignStmt).invokeExpr.method.declaringClass.toString()
                             val jsonData = Jsonator.traceToJson(it)
-                            DatabaseController.addData(jsonData!!, inpClass)
+                            println(jsonData)
+                            // DatabaseController.addData(jsonData!!, inpClass)
                         }
                     } else println("Not a malware with main method")
                 }
@@ -134,7 +135,7 @@ object SceneExtractor {
             //println("List of sucs: $currentSuccessors       len: ${currentSuccessors.size}")
             val traceOrig = allFullTraces.last().toMutableList()
             for (succ in currentSuccessors) {
-                // println("Succesor: $succ        Class: ${succ.javaClass}")
+                println("Succesor: $succ        Class: ${succ.javaClass}")
                 var method: SootMethod? = null
                 try {
                     if (succ is JInvokeStmt) {

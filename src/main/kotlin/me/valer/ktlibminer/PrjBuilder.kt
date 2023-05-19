@@ -33,6 +33,16 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
         return jarPaths
     }
 
+    fun build(path: Path): List<Path> {
+        var jarPaths = findJar(path).toList()
+        if (jarPaths.isEmpty()) {
+            var successBuild = buildDir(path)
+            if (!successBuild) successBuild = scanAndBuild(path)
+            if (successBuild) jarPaths = findJar(path).toList()
+        }
+        return jarPaths
+    }
+
     private fun buildDir(dir: Path): Boolean {
         return if (Files.exists(Paths.get("$dir/pom.xml"))) buildMaven(dir)
         else if (Files.exists(Paths.get("$dir/build.gradle.kts")) || Files.exists(Paths.get("$dir/build.gradle"))) buildGradle(
@@ -47,6 +57,15 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
     private fun scanAndBuild(prj: LocalRepository): Boolean {
         var res = false
         Files.list(prj.path).filter { Files.isDirectory(it) }.forEach {
+            val built = buildDir(it)
+            if (built) res = true
+        }
+        return res
+    }
+
+    private fun scanAndBuild(path: Path): Boolean {
+        var res = false
+        Files.list(path).filter { Files.isDirectory(it) }.forEach {
             val built = buildDir(it)
             if (built) res = true
         }

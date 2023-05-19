@@ -21,7 +21,8 @@ class SootTests {
     fun testCreatorICFG() {
         val classpath = "C:\\Users\\valer\\IdeaProjects\\libminer_test\\build\\libs\\libminer_test-1.0-SNAPSHOT.jar"
         // CreatorICFG.javaPaths = "C:/Program Files/Java/jdk1.8.0_261/jre/lib/rt.jar;"
-        SceneExtractor.runAnalyze(classpath)
+        val extractor = SceneExtractor("java.io.File")
+        extractor.runAnalyze(classpath)
         //println(CreatorICFG.icfg)
         //dotIcfg = DotGraph("")
         // graphTraverse(CreatorICFG.startPoint, CreatorICFG.icfg)
@@ -33,9 +34,9 @@ class SootTests {
         Mint.main(
             arrayOf(
                 "-input",
-                "C:/Users/valer/IdeaProjects/mintframework-master/mint-inference/src/tests/resources/MJExample3",
+                "C:\\Users\\valer\\IdeaProjects\\KtLibMiner\\src\\test\\resources\\MJExample2.txt",
                 "-k",
-                "1",
+                "2",
                 "-visout",
                 "C:/Users/valer/IdeaProjects/KtLibMiner/src/test/resources/test.txt"
             )

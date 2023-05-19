@@ -1,33 +1,22 @@
 package me.valer.ktlibminer.storage
 
 import soot.Unit
+import soot.jimple.internal.AbstractStmt
 import soot.jimple.internal.JAssignStmt
 import soot.jimple.internal.JInvokeStmt
 
-class Invoke() {
-    lateinit var methodName: String
-    lateinit var signature: String
-    lateinit var declClass: String
-    lateinit var returnedClass: String
+data class Invoke(
+    val methodName: String,
+    val signature: String,
+    val declClass: String,
+    val returnedClass: String
+) {
 
-    constructor(methodName: String, signature: String, declClass: String, returnedClass: String) : this() {
-        this.methodName = methodName
-        this.signature = signature
-        this.declClass = declClass
-        this.returnedClass = returnedClass
-    }
+    constructor(invoke: AbstractStmt) : this(
+        invoke.invokeExpr.method.name,
+        invoke.invokeExpr.method.signature,
+        invoke.invokeExpr.method.declaringClass.toString(),
+        invoke.invokeExpr.method.returnType.toString()
+    )
 
-    constructor(invoke: Unit) : this() {
-        if (invoke is JAssignStmt) {
-            methodName = invoke.invokeExpr.method.name
-            signature = invoke.invokeExpr.method.signature
-            declClass = invoke.invokeExpr.method.declaringClass.toString()
-            returnedClass = invoke.invokeExpr.method.returnType.toString()
-        } else if (invoke is JInvokeStmt) {
-            methodName = invoke.invokeExpr.method.name
-            signature = invoke.invokeExpr.method.signature
-            declClass = invoke.invokeExpr.method.declaringClass.toString()
-            returnedClass = invoke.invokeExpr.method.returnType.toString()
-        }
-    }
 }

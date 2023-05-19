@@ -7,9 +7,7 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.name
-import kotlin.io.path.walk
+import kotlin.io.path.*
 
 /***
  * With maven_path use installed maven, without maven_path use default path to maven
@@ -94,7 +92,7 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
     @OptIn(ExperimentalPathApi::class)
     private fun findJar(dir: Path): Sequence<Path> {
         return dir.walk().filter {
-            it.name.endsWith(".jar")
+            it.name.endsWith(".jar") && !it.pathString.contains("lib", ignoreCase = true)
         }
     }
 }

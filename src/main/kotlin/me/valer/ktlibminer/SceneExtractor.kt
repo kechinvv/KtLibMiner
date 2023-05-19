@@ -5,17 +5,17 @@ import me.valer.ktlibminer.storage.DatabaseController
 import me.valer.ktlibminer.storage.Jsonator
 import soot.*
 import soot.Unit
+import soot.jimple.internal.AbstractStmt
 import soot.jimple.internal.JAssignStmt
 import soot.jimple.internal.JInvokeStmt
 import soot.jimple.spark.pag.PAG
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG
 
 
-object SceneExtractor {
+class SceneExtractor(var lib: String) {
     var icfg: InterproceduralCFG<Unit, SootMethod>? = null
-    var lib = "java.io.File"
-    var allFullTraces = mutableListOf<MutableList<Unit>>(mutableListOf())
-    var extractedTraces: List<List<Unit>> = mutableListOf(mutableListOf())
+    var allFullTraces = mutableListOf<MutableList<AbstractStmt>>(mutableListOf())
+    var extractedTraces: List<List<AbstractStmt>> = mutableListOf(mutableListOf())
 
     lateinit var startPoint: Unit
     var mainMethod: SootMethod? = null
@@ -24,9 +24,6 @@ object SceneExtractor {
     lateinit var analysis: PAG
 
     init {
-
-        allFullTraces = mutableListOf(mutableListOf())
-
         if (!PackManager.v().hasPack("wjtp.ifds")) PackManager.v().getPack("wjtp")
             .add(Transform("wjtp.ifds", object : SceneTransformer() {
                 override fun internalTransform(phaseName: String?, options: MutableMap<String, String>?) {
@@ -54,16 +51,14 @@ object SceneExtractor {
                         println(icfg!!.getSuccsOf(startPoint))
 
                         graphTraverseLib(startPoint)
-                        allFullTraces = allFullTraces.distinct() as MutableList<MutableList<Unit>>
+                        allFullTraces = allFullTraces.distinct() as MutableList<MutableList<AbstractStmt>>
                         allFullTraces.forEach { println(it) }
 
                         analysis = Scene.v().pointsToAnalysis as PAG
                         extractedTraces = sequenceExtracting(allFullTraces).filter { it.size > 1 }
                         extractedTraces.forEach {
                             val indicator = it.first()
-                            val inpClass =
-                                if (indicator is JInvokeStmt) indicator.invokeExpr.method.declaringClass.toString()
-                                else (indicator as JAssignStmt).invokeExpr.method.declaringClass.toString()
+                            val inpClass = indicator.invokeExpr.method.declaringClass.toString()
                             val jsonData = Jsonator.traceToJson(it)
                             println(jsonData)
                             // DatabaseController.addData(jsonData!!, inpClass)
@@ -73,13 +68,13 @@ object SceneExtractor {
             }))
     }
 
-    fun sequenceExtracting(allTraces: List<List<Unit>>): MutableList<MutableList<Unit>> {
-        val extractedTracesRet = mutableListOf<MutableList<Unit>>(mutableListOf())
+    fun sequenceExtracting(allTraces: List<List<AbstractStmt>>): MutableList<MutableList<AbstractStmt>> {
+        val extractedTracesRet = mutableListOf<MutableList<AbstractStmt>>(mutableListOf())
         for (f_ind in allTraces.indices) {
             if (allTraces[f_ind].size < 2) continue
             val traceCopy = allTraces[f_ind].toMutableList()
             while (traceCopy.size > 1) {
-                var collector = mutableListOf<Unit>()
+                var collector = mutableListOf<AbstractStmt>()
                 val firstCallInd = 0
                 var secondCallInd = 1
                 var obj1 = traceCopy[firstCallInd]
@@ -135,15 +130,11 @@ object SceneExtractor {
             //println("List of sucs: $currentSuccessors       len: ${currentSuccessors.size}")
             val traceOrig = allFullTraces.last().toMutableList()
             for (succ in currentSuccessors) {
-                println("Succesor: $succ        Class: ${succ.javaClass}")
+                //println("Succesor: $succ        Class: ${succ.javaClass}")
                 var method: SootMethod? = null
                 try {
-                    if (succ is JInvokeStmt) {
-                        if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
-                            method = succ.invokeExpr.method
-                        if (succ.invokeExpr.method.declaringClass.toString().startsWith(lib)) allFullTraces.last()
-                            .add(succ)
-                    } else if (succ is JAssignStmt) {
+                    if (succ is JInvokeStmt || succ is JAssignStmt) {
+                        succ as AbstractStmt
                         if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
                             method = succ.invokeExpr.method
                         if (succ.invokeExpr.method.declaringClass.toString().startsWith(lib)) allFullTraces.last()
@@ -184,8 +175,7 @@ object SceneExtractor {
         }
     }
 
-    private fun getPointsTo(stmt: Unit): PointsToSet {
-        return if (stmt is JInvokeStmt) analysis.reachingObjects(stmt.invokeExpr.useBoxes[0].value as Local)
-        else analysis.reachingObjects((stmt as JAssignStmt).invokeExpr.useBoxes[0].value as Local)
+    private fun getPointsTo(stmt: AbstractStmt): PointsToSet {
+        return analysis.reachingObjects(stmt.invokeExpr.useBoxes[0].value as Local)
     }
 }

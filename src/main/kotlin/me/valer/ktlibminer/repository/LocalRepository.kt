@@ -38,10 +38,6 @@ class LocalRepository(val path: Path) {
             .filter { f: File -> f.isFile && f.name.endsWith(".kt") }.map { obj: File -> obj.absolutePath }
 
 
-    fun runAnalyze(): Boolean {
-        val icfg = SceneExtractor.runAnalyze(path.toString())
-        return icfg
-    }
 }
 
 

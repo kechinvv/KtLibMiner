@@ -90,9 +90,9 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
     }
 
     @OptIn(ExperimentalPathApi::class)
-    private fun findJar(dir: Path): Sequence<Path> {
+    fun findJar(dir: Path): Sequence<Path> {
         return dir.walk().filter {
-            it.name.endsWith(".jar") && !it.pathString.contains("lib", ignoreCase = true)
+            it.name.endsWith(".jar") && it.name.contains(dir.name)
         }
     }
 }

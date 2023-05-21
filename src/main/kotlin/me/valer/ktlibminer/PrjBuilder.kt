@@ -100,6 +100,7 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
             if (maven_path != null) v.setLocalRepo(maven_path.toString())
             v.addCliArguments("clean")
             v.addCliArguments("package")
+            v.addCliArguments("-DskipTests")
             v.execute()
             true
         } catch (e: Exception) {

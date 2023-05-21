@@ -40,6 +40,9 @@ dependencies {
     implementation(files("libs/mint-core-1.0.0-jar-with-dependencies.jar"))
     implementation(files("libs/mint-inference-1.2.0-jar-with-dependencies.jar"))
     implementation(files("libs/mint-testgen-1.1.0-jar-with-dependencies.jar"))
+
+    implementation("com.eclipsesource.j2v8:j2v8_linux_x86_64:4.6.0")
+    implementation("guru.nidi:graphviz-java-all-j2v8:0.18.1")
 }
 
 

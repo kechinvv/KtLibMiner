@@ -1,6 +1,7 @@
 package me.valer.ktlibminer.storage
 
 import java.sql.DriverManager
+import java.util.IdentityHashMap
 import kotlin.math.sqrt
 
 object DatabaseController {
@@ -11,8 +12,18 @@ object DatabaseController {
         openConnection()
         val stmt = conn.createStatement()
         stmt.executeUpdate("drop table if exists sequences")
+        stmt.executeUpdate("drop table if exists methods")
         stmt.executeUpdate("create table if not exists sequences(id integer primary key, json_data string, class string, samples integer)")
+        stmt.executeUpdate("create table if not exists methods(id integer primary key, method_name string, class string, UNIQUE(method_name,class))")
+    }
 
+    fun addMethod(methodName: String, inputClass: String) {
+        try {
+            val stmt = conn.prepareStatement("insert into methods(method_name, class) values(?,?)")
+            stmt.setString(2, inputClass)
+            stmt.setString(1, methodName)
+            stmt.execute()
+        } catch (_: Exception) {}
     }
 
     fun addData(inputData: String, inputClass: String, inputCount: Int = 1) {
@@ -35,8 +46,35 @@ object DatabaseController {
 
     }
 
-    fun getTracesForClass(inputClass: String): MutableList<String> {
-        val jsonTraces = mutableListOf<String>()
+    fun getMethodsForClass(inputClass: String): HashSet<String> {
+        val methodNames = HashSet<String>()
+        val stmt = conn.prepareStatement("select method_name from methods where class=?")
+        stmt.setString(1, inputClass)
+        val res = stmt.executeQuery()
+        while (res.next()) {
+            val name = res.getString("id")
+            methodNames.add(name)
+        }
+
+        return methodNames
+    }
+
+    fun getTracesIdForClass(inputClass: String): HashSet<Int> {
+        val idTraces = HashSet<Int>()
+        val stmt = conn.prepareStatement("select id from sequences where class=?")
+        stmt.setString(1, inputClass)
+        val res = stmt.executeQuery()
+        while (res.next()) {
+            val id = res.getInt("id")
+            idTraces.add(id)
+        }
+
+        return idTraces
+    }
+
+
+    fun getTracesForClass(inputClass: String): HashSet<String> {
+        val jsonTraces = HashSet<String>()
         val stmt = conn.prepareStatement("select json_data from sequences where class=?")
         stmt.setString(1, inputClass)
         val res = stmt.executeQuery()
@@ -46,6 +84,15 @@ object DatabaseController {
         }
 
         return jsonTraces
+    }
+
+    fun getTraceById(id: Int): String? {
+        val stmt = conn.prepareStatement("select json_data from sequences where id=?")
+        stmt.setInt(1, id)
+        val res = stmt.executeQuery()
+        if (res.next()) {
+            return res.getString("json_data")
+        } else return null
     }
 
     fun getClasses(): HashSet<String> {

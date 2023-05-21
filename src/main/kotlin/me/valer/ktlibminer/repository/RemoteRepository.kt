@@ -14,9 +14,6 @@ class RemoteRepository() {
     lateinit var url: String
     lateinit var name: String
 
-    private val defaultZipName = "project.zip"
-    private val defaultJarName = "project.zip"
-
 
     constructor(url: String, name: String) : this() {
         this.url = url.replace("\"", "")

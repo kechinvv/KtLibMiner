@@ -1,9 +1,6 @@
 package me.valer.ktlibminer.storage
 
-import soot.Unit
 import soot.jimple.internal.AbstractStmt
-import soot.jimple.internal.JAssignStmt
-import soot.jimple.internal.JInvokeStmt
 
 data class Invoke(
     val methodName: String,

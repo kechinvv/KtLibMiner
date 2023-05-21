@@ -2,6 +2,7 @@ package me.valer.ktlibminer
 
 import heros.InterproceduralCFG
 import me.valer.ktlibminer.storage.DatabaseController
+import me.valer.ktlibminer.storage.DatabaseController.addMethod
 import me.valer.ktlibminer.storage.Jsonator
 import soot.*
 import soot.Unit
@@ -52,7 +53,15 @@ class SceneExtractor(var lib: String) {
 
                         graphTraverseLib(startPoint)
                         allFullTraces = allFullTraces.distinct() as MutableList<MutableList<AbstractStmt>>
-                        allFullTraces.forEach { println(it) }
+                        allFullTraces.forEach {
+                            println(it)
+                            it.forEach { invoke ->
+                                addMethod(
+                                    invoke.invokeExpr.method.name,
+                                    invoke.invokeExpr.method.declaringClass.toString(),
+                                )
+                            }
+                        }
 
                         analysis = Scene.v().pointsToAnalysis as PAG
                         extractedTraces = sequenceExtracting(allFullTraces).filter { it.size > 1 }
@@ -115,7 +124,6 @@ class SceneExtractor(var lib: String) {
         }
         return extractedTracesRet
     }
-
 
 
     fun graphTraverseLib(

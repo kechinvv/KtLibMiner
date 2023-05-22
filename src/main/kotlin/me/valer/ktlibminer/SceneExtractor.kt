@@ -16,7 +16,7 @@ import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG
 class SceneExtractor(var lib: String) {
     var icfg: InterproceduralCFG<Unit, SootMethod>? = null
     var allFullTraces = mutableListOf<MutableList<AbstractStmt>>(mutableListOf())
-    var extractedTraces: List<List<AbstractStmt>> = mutableListOf(mutableListOf())
+    var extractedTraces = HashSet<List<AbstractStmt>>()
 
     lateinit var startPoint: Unit
     var mainMethod: SootMethod? = null
@@ -51,6 +51,7 @@ class SceneExtractor(var lib: String) {
                         println("START POINT SET")
                         println(icfg!!.getSuccsOf(startPoint))
 
+                        allFullTraces = mutableListOf(mutableListOf())
                         graphTraverseLib(startPoint)
                         allFullTraces = allFullTraces.distinct() as MutableList<MutableList<AbstractStmt>>
                         allFullTraces.forEach {
@@ -64,8 +65,9 @@ class SceneExtractor(var lib: String) {
                         }
 
                         analysis = Scene.v().pointsToAnalysis as PAG
-                        extractedTraces = sequenceExtracting(allFullTraces).filter { it.size > 1 }
+                        extractedTraces = sequenceExtracting(allFullTraces).filter { it.size > 0 }.toHashSet()
                         extractedTraces.forEach {
+                            println(it)
                             val indicator = it.first()
                             val inpClass = indicator.invokeExpr.method.declaringClass.toString()
                             val jsonData = Jsonator.traceToJson(it)
@@ -77,50 +79,73 @@ class SceneExtractor(var lib: String) {
             }))
     }
 
-    fun sequenceExtracting(allTraces: List<List<AbstractStmt>>): MutableList<MutableList<AbstractStmt>> {
-        val extractedTracesRet = mutableListOf<MutableList<AbstractStmt>>(mutableListOf())
-        for (f_ind in allTraces.indices) {
-            if (allTraces[f_ind].size < 2) continue
-            val traceCopy = allTraces[f_ind].toMutableList()
+    fun sequenceExtracting(allTraces: List<List<AbstractStmt>>): HashSet<List<AbstractStmt>> {
+        val extractedTracesRet = HashSet<List<AbstractStmt>>(mutableListOf())
+        for (trace in allTraces) {
+            if (trace.size < 2) continue
+            val (traceStatic, traceCopy) = trace.partition { it.invokeExpr.method.isStatic }
+
+            val staticExtracted = staticExtracting(traceStatic.toMutableList())
+            extractedTracesRet.addAll(staticExtracted)
+            val invokeExtracted = invokeExtracting(traceCopy.toMutableList())
+            extractedTracesRet.addAll(invokeExtracted)
+        }
+        return extractedTracesRet
+    }
+
+    private fun staticExtracting(traceStatic: MutableList<AbstractStmt>): HashSet<List<AbstractStmt>> {
+        val extractedTracesRet = HashSet<List<AbstractStmt>>(mutableListOf())
+        while (traceStatic.isNotEmpty()) {
+            val collector = mutableListOf<AbstractStmt>()
+            val invokeClass = traceStatic.first().invokeExpr.method.declaringClass
+            for (statInvoke in traceStatic) {
+                if (statInvoke.invokeExpr.method.declaringClass == invokeClass) collector.add(statInvoke)
+            }
+            extractedTracesRet.add(collector)
+            traceStatic.removeAll(collector)
+        }
+        return extractedTracesRet
+    }
+
+    private fun invokeExtracting(traceCopy: MutableList<AbstractStmt>): HashSet<List<AbstractStmt>> {
+        val extractedTracesRet = HashSet<List<AbstractStmt>>(mutableListOf())
+        while (traceCopy.size > 1) {
+            var collector = mutableListOf<AbstractStmt>()
+            val firstCallInd = 0
+            var secondCallInd = 1
+            var obj1 = traceCopy[firstCallInd]
+            var obj2 = traceCopy[secondCallInd]
             while (traceCopy.size > 1) {
-                var collector = mutableListOf<AbstractStmt>()
-                val firstCallInd = 0
-                var secondCallInd = 1
-                var obj1 = traceCopy[firstCallInd]
-                var obj2 = traceCopy[secondCallInd]
-                while (traceCopy.size > 1) {
 
-                    val obj1PT = getPointsTo(obj1)
-                    val obj2PT = getPointsTo(obj2)
+                val obj1PT = getPointsTo(obj1)
+                val obj2PT = getPointsTo(obj2)
 
-                    val resAlias = obj1PT.hasNonEmptyIntersection(obj2PT)
+                val resAlias = obj1PT.hasNonEmptyIntersection(obj2PT)
 
-                    // println("$obj1 to $obj2 = $resAlias")
+                // println("$obj1 to $obj2 = $resAlias")
 
-                    if (resAlias) {
-                        collector.add(obj1)
-                        traceCopy.remove(obj1)
-                        obj1 = obj2
-                        secondCallInd--
-                    }
-                    if (secondCallInd >= traceCopy.size - 1) {
-                        collector.add(obj1)
-                        traceCopy.remove(obj1)
+                if (resAlias) {
+                    collector.add(obj1)
+                    traceCopy.remove(obj1)
+                    obj1 = obj2
+                    secondCallInd--
+                }
+                if (secondCallInd >= traceCopy.size - 1) {
+                    collector.add(obj1)
+                    traceCopy.remove(obj1)
 
-                        extractedTracesRet.add(collector)
-                        collector = mutableListOf()
-                        if (traceCopy.size > 1) {
-                            obj1 = traceCopy[firstCallInd]
-                            secondCallInd = firstCallInd + 1
-                            obj2 = traceCopy[secondCallInd]
-                        }
-                    } else {
-                        secondCallInd++
+                    extractedTracesRet.add(collector)
+                    collector = mutableListOf()
+                    if (traceCopy.size > 1) {
+                        obj1 = traceCopy[firstCallInd]
+                        secondCallInd = firstCallInd + 1
                         obj2 = traceCopy[secondCallInd]
                     }
+                } else {
+                    secondCallInd++
+                    obj2 = traceCopy[secondCallInd]
                 }
             }
-
         }
         return extractedTracesRet
     }

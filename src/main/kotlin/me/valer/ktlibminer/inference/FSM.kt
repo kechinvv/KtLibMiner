@@ -8,7 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 
-class FSM(val className: String, val edgesDot: Collection<Link>, val nodesDot: Collection<MutableNode>) {
+class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collection<MutableNode>) {
     val states = HashSet<State>()
     val shifts = HashSet<Shift>()
     private val initial = "initial"
@@ -18,7 +18,9 @@ class FSM(val className: String, val edgesDot: Collection<Link>, val nodesDot: C
     fun toJson(filePath: Path) {
         extractData()
         val map = HashMap<String, Any>()
-        map["name"] = className
+        if (info.endsWith("__s")) map["class"] = info.dropLast(3).replace('+','.')
+        else map["class"] = info.replace('+','.')
+        map["name"] = info
         map["shifts"] = shifts
         map["states"] = states
         val strJson = GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(map)

@@ -65,11 +65,12 @@ class SceneExtractor(var lib: String) {
                         }
 
                         analysis = Scene.v().pointsToAnalysis as PAG
-                        extractedTraces = sequenceExtracting(allFullTraces).filter { it.size > 0 }.toHashSet()
+                        extractedTraces = sequenceExtracting(allFullTraces).filter { it.size > 1 }.toHashSet()
                         extractedTraces.forEach {
                             println(it)
                             val indicator = it.first()
-                            val inpClass = indicator.invokeExpr.method.declaringClass.toString()
+                            var inpClass = indicator.invokeExpr.method.declaringClass.toString().replace(".", "+")
+                            if (indicator.invokeExpr.method.isStatic) inpClass += "__s"
                             val jsonData = Jsonator.traceToJson(it)
                             println(jsonData)
                             // DatabaseController.addData(jsonData!!, inpClass)
@@ -121,10 +122,11 @@ class SceneExtractor(var lib: String) {
                 val obj2PT = getPointsTo(obj2)
 
                 val resAlias = obj1PT.hasNonEmptyIntersection(obj2PT)
+                val equalClass = obj1.invokeExpr.method.declaringClass == obj2.invokeExpr.method.declaringClass
 
                 // println("$obj1 to $obj2 = $resAlias")
 
-                if (resAlias) {
+                if (resAlias && equalClass) {
                     collector.add(obj1)
                     traceCopy.remove(obj1)
                     obj1 = obj2

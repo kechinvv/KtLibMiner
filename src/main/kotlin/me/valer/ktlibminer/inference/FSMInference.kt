@@ -35,9 +35,10 @@ class FSMInference(val source: String, val dest: String = source) {
             val trace = getTraceById(it)
             updateFileTrace(trace!!, filePathIn)
         }
-        val filePathOut = Path(dest, klass + "Out.dot").toString()
-        inferenceFSM(filePathIn, filePathOut)
-        if (toJson) dotToJson(filePathOut, klass)
+        val filePathOutDot = Path(dest, klass + "Out.dot").toString()
+        inferenceFSM(filePathIn, filePathOutDot)
+        val filePathOut = Path(dest, "$klass.json").toString()
+        if (toJson) dotToJson(filePathOutDot, filePathOut, klass)
     }
 
     fun inferenceFSM(pathIn: String, pathOut: String, k: Int = 2) {
@@ -56,12 +57,14 @@ class FSMInference(val source: String, val dest: String = source) {
     fun createInputFile(methods: HashSet<String>, klass: String): String {
         val path = Path(source, klass + "In.txt").toString()
         try {
-            Files.write(Paths.get(path), listOf("types\n"), StandardCharsets.UTF_8, StandardOpenOption.WRITE)
+            Files.deleteIfExists(Paths.get(path))
+            Files.write(Paths.get(path), listOf("types"), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.WRITE)
             methods.forEach {
-                Files.write(Paths.get(path), listOf("${it}\n"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
+                Files.write(Paths.get(path), listOf(it), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
             }
-            Files.write(Paths.get(path), listOf("end\n"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
-        } catch (_: IOException) {
+            Files.write(Paths.get(path), listOf("end"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
+        } catch (e: IOException) {
+            println(e)
         }
         return path
     }
@@ -69,32 +72,26 @@ class FSMInference(val source: String, val dest: String = source) {
     fun updateFileTrace(jsonTrace: String, filePath: String) {
         val realTrace = jsonToTrace(jsonTrace)
         try {
-            Files.write(Paths.get(filePath), listOf("trace\n"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
+            Files.write(Paths.get(filePath), listOf("trace"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
             realTrace.forEach {
                 Files.write(
                     Paths.get(filePath),
-                    listOf("${it.methodName}\n"),
+                    listOf(it.methodName),
                     StandardCharsets.UTF_8,
                     StandardOpenOption.APPEND
                 )
             }
-            Files.write(Paths.get(filePath), listOf("end\n"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
-        } catch (_: IOException) {
+            Files.write(Paths.get(filePath), listOf("end"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
+        } catch (e: IOException) {
+            println(e)
         }
     }
 
-    fun dotToJson(path: String, klass: String) {
-        val dot = File(path).inputStream()
-        val g =  Parser().read(dot)
-        val rootJson = JsonObject()
-        val a = g.nodes()
-        g.edges().forEach {
-            println(it.name())
-            println(it.attrs())
-        }
-        g.nodes().forEach {
-            println(it.name())
-        }
+    fun dotToJson(pathDot: String, pathJson: String, klass: String) {
+        val dot = File(pathDot).inputStream()
+        val g = Parser().read(dot)
+        val fsm = FSM(klass, g.edges(), g.nodes())
+        fsm.toJson(Path(pathJson))
     }
 
 }

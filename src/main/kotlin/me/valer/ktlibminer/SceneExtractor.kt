@@ -1,7 +1,7 @@
 package me.valer.ktlibminer
 
 import heros.InterproceduralCFG
-import me.valer.ktlibminer.storage.DatabaseController.addMethod
+import me.valer.ktlibminer.storage.DatabaseController
 import me.valer.ktlibminer.storage.Jsonator
 import soot.*
 import soot.Unit
@@ -55,7 +55,7 @@ class SceneExtractor(var lib: String) {
                             allFullTraces.forEach {
                                 println(it)
                                 it.forEach { invoke ->
-                                    addMethod(
+                                    DatabaseController.addMethod(
                                         invoke.invokeExpr.method.name,
                                         invoke.invokeExpr.method.declaringClass.toString(),
                                     )
@@ -71,7 +71,7 @@ class SceneExtractor(var lib: String) {
                                 if (indicator.invokeExpr.method.isStatic) inpClass += "__s"
                                 val jsonData = Jsonator.traceToJson(it)
                                 println(jsonData)
-                                // DatabaseController.addData(jsonData!!, inpClass)
+                                DatabaseController.addTrace(jsonData!!, inpClass)
                             }
                         }
                     } else println("Not a malware with main method")

@@ -1,6 +1,6 @@
 package me.valer.ktlibminer.storage
 
-import soot.jimple.internal.AbstractStmt
+import soot.SootMethod
 
 data class Invoke(
     val methodName: String,
@@ -9,11 +9,11 @@ data class Invoke(
     val returnedClass: String
 ) {
 
-    constructor(invoke: AbstractStmt) : this(
-        invoke.invokeExpr.method.name,
-        invoke.invokeExpr.method.signature,
-        invoke.invokeExpr.method.declaringClass.toString(),
-        invoke.invokeExpr.method.returnType.toString()
+    constructor(invoke: SootMethod) : this(
+        invoke.name,
+        invoke.signature,
+        invoke.declaringClass.toString(),
+        invoke.returnType.toString()
     )
 
 }

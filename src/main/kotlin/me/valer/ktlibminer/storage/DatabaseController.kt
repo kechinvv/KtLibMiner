@@ -1,7 +1,6 @@
 package me.valer.ktlibminer.storage
 
 import java.sql.DriverManager
-import java.util.IdentityHashMap
 import kotlin.math.sqrt
 
 object DatabaseController {
@@ -26,7 +25,7 @@ object DatabaseController {
         } catch (_: Exception) {}
     }
 
-    fun addData(inputData: String, inputClass: String, inputCount: Int = 1) {
+    fun addTrace(inputData: String, inputClass: String, inputCount: Int = 1) {
         var stmt = conn.prepareStatement("select samples from sequences where json_data=?")
         stmt.setString(1, inputData)
         val res = stmt.executeQuery()

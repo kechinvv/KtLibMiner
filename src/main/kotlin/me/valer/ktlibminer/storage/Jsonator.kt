@@ -12,7 +12,7 @@ object Jsonator {
     fun traceToJson(trace: List<AbstractStmt>): String? {
         val invokeTrace: MutableList<Invoke> = mutableListOf()
         for (item in trace) {
-            invokeTrace.add(Invoke(item))
+            invokeTrace.add(Invoke(item.invokeExpr.method))
         }
         val json = GsonBuilder().disableHtmlEscaping().create().toJson(invokeTrace)
         return json

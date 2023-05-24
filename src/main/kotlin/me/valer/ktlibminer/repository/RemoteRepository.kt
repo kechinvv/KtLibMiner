@@ -2,6 +2,7 @@ package me.valer.ktlibminer.repository
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import me.valer.ktlibminer.Configurations
 import java.io.*
 import java.net.URL
 import java.nio.file.Files
@@ -10,19 +11,17 @@ import java.util.zip.ZipFile
 import kotlin.io.path.Path
 
 
-class RemoteRepository() {
-    lateinit var url: String
-    lateinit var name: String
+class RemoteRepository(var url: String, var name: String) {
 
 
-    constructor(url: String, name: String) : this() {
-        this.url = url.replace("\"", "")
-        this.name = name.replace("\"", "")
-    }
+    constructor(repoJSON: JsonObject) : this(
+        repoJSON.get("html_url").toString(),
+        repoJSON.get("full_name").toString()
+    )
 
-    constructor(repoJSON: JsonObject) : this() {
-        this.url = repoJSON.get("html_url").toString().replace("\"", "")
-        this.name = repoJSON.get("full_name").toString().replace("\"", "")
+    init {
+        url = url.replace("\"", "")
+        name = name.replace("\"", "")
     }
 
     fun getAssets(token: String): String? {
@@ -51,9 +50,9 @@ class RemoteRepository() {
 
 
     @Throws(InterruptedException::class, IOException::class)
-    fun cloneTo(path: Path, token: String): LocalRepository {
+    fun cloneTo(path: Path): LocalRepository {
         var jarName: String? = null
-        val downloadURL = getAssets(token)
+        val downloadURL = getAssets(Configurations.ghToken!!)
         if (downloadURL != null) {
             Files.createDirectories(path)
             val fileBytes = URL(downloadURL).readBytes()

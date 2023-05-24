@@ -18,8 +18,8 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
     fun toJson(filePath: Path) {
         extractData()
         val map = HashMap<String, Any>()
-        if (info.endsWith("__s")) map["class"] = info.dropLast(3).replace('+','.')
-        else map["class"] = info.replace('+','.')
+        if (info.endsWith("__s")) map["class"] = info.dropLast(3).replace('+', '.')
+        else map["class"] = info.replace('+', '.')
         map["name"] = info
         map["shifts"] = shifts
         map["states"] = states

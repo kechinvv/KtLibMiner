@@ -10,7 +10,7 @@ const val maxPage = 10
 const val maxRes = 1000
 const val linkGH = "https://api.github.com/search/code"
 
-class ProjectsSequence(val lib: String, val token: String) : Sequence<RemoteRepository> {
+class ProjectsSequence(val lib: String) : Sequence<RemoteRepository> {
     private var page = 1
     private var lbound = 0
     private var rbound = 50
@@ -46,7 +46,7 @@ class ProjectsSequence(val lib: String, val token: String) : Sequence<RemoteRepo
                 "per_page" to "100",
                 "page" to page.toString()
             ),
-            headers = mapOf("Authorization" to "Token $token")
+            headers = mapOf("Authorization" to "Token ${Configurations.ghToken}")
         ).text
     }
 

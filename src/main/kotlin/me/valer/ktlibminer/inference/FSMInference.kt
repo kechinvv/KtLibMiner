@@ -1,7 +1,5 @@
 package me.valer.ktlibminer.inference
 
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import guru.nidi.graphviz.parse.Parser
 import me.valer.ktlibminer.storage.DatabaseController.getClasses
 import me.valer.ktlibminer.storage.DatabaseController.getMethodsForClass
@@ -17,7 +15,7 @@ import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.Path
 
-class FSMInference(val source: String, val dest: String = source) {
+class FSMInference(val mintFilesPath: String, val jsonAndDotFilesPath: String = mintFilesPath) {
 
 
     fun inferenceAll() {
@@ -35,13 +33,14 @@ class FSMInference(val source: String, val dest: String = source) {
             val trace = getTraceById(it)
             updateFileTrace(trace!!, filePathIn)
         }
-        val filePathOutDot = Path(dest, klass + "Out.dot").toString()
+        val filePathOutDot = Path(jsonAndDotFilesPath, klass + "Out.dot").toString()
         inferenceFSM(filePathIn, filePathOutDot)
-        val filePathOut = Path(dest, "$klass.json").toString()
+        val filePathOut = Path(jsonAndDotFilesPath, "$klass.json").toString()
         if (toJson) dotToJson(filePathOutDot, filePathOut, klass)
     }
 
     fun inferenceFSM(pathIn: String, pathOut: String, k: Int = 2) {
+        Files.createDirectories(Paths.get(pathOut))
         Mint.main(
             arrayOf(
                 "-input",
@@ -55,10 +54,16 @@ class FSMInference(val source: String, val dest: String = source) {
     }
 
     fun createInputFile(methods: HashSet<String>, klass: String): String {
-        val path = Path(source, klass + "In.txt").toString()
+        val path = Path(mintFilesPath, klass + "In.txt").toString()
         try {
             Files.deleteIfExists(Paths.get(path))
-            Files.write(Paths.get(path), listOf("types"), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.WRITE)
+            Files.write(
+                Paths.get(path),
+                listOf("types"),
+                StandardCharsets.UTF_8,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.WRITE
+            )
             methods.forEach {
                 Files.write(Paths.get(path), listOf(it), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
             }

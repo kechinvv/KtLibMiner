@@ -1,22 +1,41 @@
 package me.valer.ktlibminer
 
-import com.google.gson.Gson
-import java.io.FileReader
+import me.valer.ktlibminer.inference.FSMInference
+import me.valer.ktlibminer.storage.DatabaseController
 import kotlin.io.path.Path
 
 fun main(args: Array<String>) {
-    val cfg = Gson().fromJson(
-        FileReader("C:\\Users\\valer\\IdeaProjects\\KtLibMiner\\src\\main\\resources\\token.txt"),
-        HashMap::class.java
-    )
-    val seq = ProjectsSequence("khttp", cfg["token"] as String)
-    val list = seq.take(200).distinctBy { it.name }.toList()
-    println(list)
-    list.forEach {
-        val prj =
-            it.cloneTo(Path("C:/Users/valer/IdeaProjects/KtLibMiner/src/test/resources/" + it.name.replace('/', '_')))
-        prj.getICFG()
+    DatabaseController.initDB()
+    try {
+        Configurations.ghToken = System.getenv("token")
+        Configurations.gradleVersion = "7.5.1"
+
+        val analyzedPrjStorage = HashSet<String>()
+        val extractor = SceneExtractor("java.io.File")
+        val seq = ProjectsSequence("java.io.FileReader")
+
+        seq.filter { !analyzedPrjStorage.contains(it.name) }.map {
+            analyzedPrjStorage.add(it.name)
+            println(it.name)
+            val localPrj = it.cloneTo(Path("D:/ktlibminer/reps/" + it.name.replace('/', '_')))
+            if (localPrj.jar != null) extractor.runAnalyze(localPrj.jar)
+            else {
+                val jars = localPrj.build()
+                jars.forEach { jar ->
+                    extractor.runAnalyze(jar.toString())
+                }
+            }
+            localPrj.delete()
+        }.take(100).last()
+
+        FSMInference("D:/ktlibminer/").inferenceAll()
+    } catch (e: Exception) {
+        println(e)
+    } finally {
+        DatabaseController.closeConnection()
     }
 }
+
+
 
 

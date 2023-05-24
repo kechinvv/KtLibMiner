@@ -11,7 +11,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.stream.Stream
 
 
-class LocalRepository(val path: Path) {
+class LocalRepository(val path: Path, val jar: String?) {
 
     @Throws(IOException::class)
     fun delete() {

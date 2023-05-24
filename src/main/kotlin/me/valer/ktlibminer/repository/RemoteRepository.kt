@@ -52,6 +52,7 @@ class RemoteRepository() {
 
     @Throws(InterruptedException::class, IOException::class)
     fun cloneTo(path: Path, token: String): LocalRepository {
+        var jarName: String? = null
         val downloadURL = getAssets(token)
         if (downloadURL != null) {
             Files.createDirectories(path)
@@ -65,13 +66,13 @@ class RemoteRepository() {
             if (!downloadURL.endsWith(".jar")) {
                 unzip(fileName, path.toString())
                 Files.delete(Path(fileName))
-            }
+            } else jarName = fileName
         } else {
             val proc = ProcessBuilder("git", "clone", "--depth=1", "--recurse-submodules", url, path.toString()).start()
             proc.waitFor()
             proc.destroy()
         }
-        return LocalRepository(path)
+        return LocalRepository(path, jarName)
     }
 
     fun unzip(zipFileName: String, destDirectory: String) {

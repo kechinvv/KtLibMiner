@@ -1,4 +1,4 @@
-package me.valer.ktlibminer
+package me.valer.ktlibminer.builder
 
 import me.valer.ktlibminer.repository.LocalRepository
 import org.apache.maven.shared.verifier.Verifier
@@ -27,18 +27,8 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
         var jarPaths = findJar(prj.path).toList()
         if (jarPaths.isEmpty()) {
             var successBuild = buildDir(prj.path)
-            if (!successBuild) successBuild = scanAndBuild(prj)
+            if (!successBuild) successBuild = scanAndBuild(prj.path)
             if (successBuild) jarPaths = findJar(prj.path).toList()
-        }
-        return jarPaths
-    }
-
-    fun build(path: Path): List<Path> {
-        var jarPaths = findJar(path).toList()
-        if (jarPaths.isEmpty()) {
-            var successBuild = buildDir(path)
-            if (!successBuild) successBuild = scanAndBuild(path)
-            if (successBuild) jarPaths = findJar(path).toList()
         }
         return jarPaths
     }
@@ -54,15 +44,6 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
     /*
     * Find pom or gradle file on 1 level below the root
     * */
-    private fun scanAndBuild(prj: LocalRepository): Boolean {
-        var res = false
-        Files.list(prj.path).filter { Files.isDirectory(it) }.forEach {
-            val built = buildDir(it)
-            if (built) res = true
-        }
-        return res
-    }
-
     private fun scanAndBuild(path: Path): Boolean {
         var res = false
         Files.list(path).filter { Files.isDirectory(it) }.forEach {
@@ -82,7 +63,7 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
                 val build = it.newBuild()
                 build.forTasks("clean")
                 build.run()
-                build.forTasks("jar")
+                build.forTasks("build").withArguments("-x", "test")
                 build.run()
             }
             true
@@ -109,11 +90,28 @@ class PrjBuilder(var maven_path: Path?, var gradle_path: Path? = null, var gradl
         }
     }
 
-    @OptIn(ExperimentalPathApi::class)
-    fun findJar(dir: Path): Sequence<Path> {
-        return dir.walk().filter {
-            it.name.endsWith(".jar") && it.name.contains(dir.name)
-        }
+    fun findJar(dir: Path): MutableList<Path> {
+        return if (Files.exists(Paths.get("$dir/pom.xml"))) findJarWalk(dir, BuilderType.MAVEN)
+        else if (Files.exists(Paths.get("$dir/build.gradle.kts")) || Files.exists(Paths.get("$dir/build.gradle"))) findJarWalk(
+            dir, BuilderType.GRADLE
+        ) else findJarWalk(dir, BuilderType.UNDEFINED)
     }
+
+
+    @OptIn(ExperimentalPathApi::class)
+    fun findJarWalk(dir: Path, buildSys: BuilderType): MutableList<Path> {
+        val jarDirDef = Path(dir.toString(), *buildSys.path.toTypedArray())
+        val jars = if (jarDirDef.exists()) jarDirDef.walk().filter { it.name.endsWith(".jar") }.toMutableList()
+        else mutableListOf()
+        Files.list(dir).filter { Files.isDirectory(it) }.forEach {
+            BuilderType.values().forEach {type ->
+                val jarDir = Path(it.absolutePathString(), *type.path.toTypedArray())
+                if (jarDir.exists()) jars.addAll(jarDirDef.walk().filter { f -> f.name.endsWith(".jar") })
+            }
+        }
+        return jars
+    }
+
+
 }
 

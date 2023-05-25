@@ -10,6 +10,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.ZipFile
 import kotlin.io.path.Path
+import kotlin.io.path.notExists
 
 
 class RemoteRepository(var url: String, var name: String) {
@@ -70,7 +71,8 @@ class RemoteRepository(var url: String, var name: String) {
             } else jarName = fileName
         } else {
             println("this")
-            val git = Git.cloneRepository()
+
+            if (path.notExists()) Git.cloneRepository()
                 .setDepth(1)
                 .setCloneSubmodules(true)
                 .setURI(url)

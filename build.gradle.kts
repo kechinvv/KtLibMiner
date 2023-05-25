@@ -34,6 +34,7 @@ dependencies {
 
     testImplementation(kotlin("test"))
 
+    runtimeOnly("org.slf4j:slf4j-simple:2.0.5")
 
     implementation(files("libs/mint-core-1.0.0-jar-with-dependencies.jar"))
     implementation(files("libs/mint-inference-1.2.0-jar-with-dependencies.jar"))

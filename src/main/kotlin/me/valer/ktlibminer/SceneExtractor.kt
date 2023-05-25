@@ -10,6 +10,7 @@ import soot.jimple.internal.JAssignStmt
 import soot.jimple.internal.JInvokeStmt
 import soot.jimple.spark.pag.PAG
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG
+import soot.options.Options
 
 
 class SceneExtractor(var lib: String) {
@@ -23,6 +24,7 @@ class SceneExtractor(var lib: String) {
     lateinit var analysis: PAG
 
     init {
+        G.reset()
         if (!PackManager.v().hasPack("wjtp.ifds")) PackManager.v().getPack("wjtp")
             .add(Transform("wjtp.ifds", object : SceneTransformer() {
                 override fun internalTransform(phaseName: String?, options: MutableMap<String, String>?) {
@@ -57,7 +59,7 @@ class SceneExtractor(var lib: String) {
                                 it.forEach { invoke ->
                                     DatabaseController.addMethod(
                                         invoke.invokeExpr.method.name,
-                                        invoke.invokeExpr.method.declaringClass.toString(),
+                                        invoke.invokeExpr.method.declaringClass.toString().replace(".", "+"),
                                     )
                                 }
                             }
@@ -74,7 +76,10 @@ class SceneExtractor(var lib: String) {
                                 DatabaseController.addTrace(jsonData!!, inpClass)
                             }
                         }
-                    } else println("Not a malware with main method")
+                    } else {
+                        println(Scene.v().classes)
+                        println("Not a malware with main method")
+                    }
                 }
             }))
     }
@@ -190,20 +195,33 @@ class SceneExtractor(var lib: String) {
 
     fun runAnalyze(classpath: String): Boolean {
         try {
-            val args = arrayOf(
-                "-w",
-                "-pp",
-                "-allow-phantom-refs",
-                "-process-dir",
-                classpath,
-                "-p",
-                "cg.spark",
-                "enabled:true,verbose:true"
-            )
-            Main.main(args)
-            G.reset()
+//            val args = arrayOf(
+//                "-w",
+//                "-pp",
+//                "-allow-phantom-refs",
+//                "-src-prec",
+//                "only-class",
+//                "-process-dir",
+//                classpath,
+//                "-p",
+//                "cg.spark",
+//                "enabled:true,verbose:true"
+//            )
+//             Main.main(args)
+            Options.v().set_prepend_classpath(true);
+            Options.v().set_whole_program(true)
+            Options.v().set_allow_phantom_refs(true)
+            Options.v().set_src_prec(2)
+            Options.v().set_process_dir(listOf(classpath))
+            Options.v().setPhaseOption("cg.spark", "enabled:true")
+            Options.v().setPhaseOption("cg.spark", "verbose:true")
+            Scene.v().loadNecessaryClasses()
+            PackManager.v().runPacks().runCatching { }
             return true
         } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        } catch (e: RuntimeException) {
             e.printStackTrace()
             return false
         }

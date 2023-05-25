@@ -1,6 +1,7 @@
 package me.valer.ktlibminer.inference
 
 import guru.nidi.graphviz.parse.Parser
+import me.valer.ktlibminer.Configurations
 import me.valer.ktlibminer.storage.DatabaseController.getClasses
 import me.valer.ktlibminer.storage.DatabaseController.getMethodsForClass
 import me.valer.ktlibminer.storage.DatabaseController.getTraceById
@@ -40,13 +41,13 @@ class FSMInference(val mintFilesPath: String, val jsonAndDotFilesPath: String = 
     }
 
     fun inferenceFSM(pathIn: String, pathOut: String, k: Int = 2) {
-        Files.createDirectories(Paths.get(pathOut))
+        Files.createDirectories(Paths.get(jsonAndDotFilesPath))
         Mint.main(
             arrayOf(
                 "-input",
                 pathIn,
                 "-k",
-                k.toString(),
+                Configurations.kInf.toString(),
                 "-visout",
                 pathOut
             )

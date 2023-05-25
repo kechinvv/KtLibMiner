@@ -51,10 +51,9 @@ object DatabaseController {
         stmt.setString(1, inputClass)
         val res = stmt.executeQuery()
         while (res.next()) {
-            val name = res.getString("id")
+            val name = res.getString("method_name")
             methodNames.add(name)
         }
-
         return methodNames
     }
 

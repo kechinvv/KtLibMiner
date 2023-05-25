@@ -30,12 +30,13 @@ fun main(args: Array<String>) {
                     extractor.runAnalyze(jar.toString())
                 }
             }
-            localPrj.delete()
+            //localPrj.delete()
         }.take(100).last()
 
         FSMInference("D:/ktlibminertest/").inferenceAll()
     } catch (e: Exception) {
-        throw e
+        println(e)
+        println(e.stackTrace)
     } finally {
         DatabaseController.closeConnection()
     }

@@ -24,7 +24,8 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
         map["shifts"] = shifts
         map["states"] = states
         val strJson = GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(map)
-        Files.write(filePath, listOf(strJson), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
+        Files.deleteIfExists(filePath)
+        Files.write(filePath, listOf(strJson), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.WRITE)
     }
 
     fun extractData() {

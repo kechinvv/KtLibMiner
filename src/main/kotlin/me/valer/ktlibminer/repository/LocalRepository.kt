@@ -90,30 +90,14 @@ class LocalRepository(val path: Path, val jar: String?) {
         }
     }
 
-    fun findJar(dir: Path): List<Path> {
-        return if (Files.exists(Paths.get("$dir/pom.xml"))) findJarWalk(dir, BuilderType.MAVEN)
-        else if (Files.exists(Paths.get("$dir/build.gradle.kts")) || Files.exists(Paths.get("$dir/build.gradle"))) findJarWalk(
-            dir, BuilderType.GRADLE
-        ) else findJarWalk(dir, BuilderType.UNDEFINED)
-    }
-
-
-    fun findJarWalk(dir: Path, buildSys: BuilderType): List<Path> {
-        val jars = mutableListOf<Path>()
-        jars.addAll(findJarByType(dir, buildSys))
-        Files.list(dir).filter { Files.isDirectory(it) }.forEach {
-            BuilderType.values().forEach { type ->
-                jars.addAll(findJarByType(it, type))
-            }
-        }
-        return jars.distinctBy { it.name }.filterNot { it.name == "gradle-wrapper.jar" }
-    }
 
     @OptIn(ExperimentalPathApi::class)
-    fun findJarByType(dir: Path, buildSys: BuilderType): List<Path> {
-        val jarDirDef = Path(dir.toString(), *buildSys.path.toTypedArray())
-        return if (jarDirDef.exists()) jarDirDef.walk().filter { it.name.endsWith(".jar") }.toList()
-        else listOf()
+    fun findJar(dir: Path): List<Path> {
+        return dir.walk().filter {
+            it.name.endsWith(".jar") &&
+                    (it.absolutePathString().contains(BuilderType.GRADLE.path.joinToString("/")) ||
+                            it.absolutePathString().contains(BuilderType.MAVEN.path.joinToString("/")))
+        }.toList().distinctBy { it.name }.filterNot { it.name == "gradle-wrapper.jar" }
     }
 
 

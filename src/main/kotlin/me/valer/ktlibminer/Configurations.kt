@@ -5,4 +5,5 @@ object Configurations {
     var gradlePath: String? = null
     var gradleVersion: String? = null
     var ghToken: String? = null
+    var kInf = 2
 }

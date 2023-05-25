@@ -53,7 +53,7 @@ class SceneExtractor(var lib: String) {
                             graphTraverseLib(startPoint)
                             allFullTraces = allFullTraces.distinct() as MutableList<MutableList<AbstractStmt>>
                             allFullTraces.forEach {
-                                println(it)
+                                //println(it)
                                 it.forEach { invoke ->
                                     DatabaseController.addMethod(
                                         invoke.invokeExpr.method.name,
@@ -65,12 +65,12 @@ class SceneExtractor(var lib: String) {
                             analysis = Scene.v().pointsToAnalysis as PAG
                             extractedTraces = sequenceExtracting(allFullTraces).filter { it.size > 1 }.toHashSet()
                             extractedTraces.forEach {
-                                println(it)
+                                //println(it)
                                 val indicator = it.first()
                                 var inpClass = indicator.invokeExpr.method.declaringClass.toString().replace(".", "+")
                                 if (indicator.invokeExpr.method.isStatic) inpClass += "__s"
                                 val jsonData = Jsonator.traceToJson(it)
-                                println(jsonData)
+                                //println(jsonData)
                                 DatabaseController.addTrace(jsonData!!, inpClass)
                             }
                         }

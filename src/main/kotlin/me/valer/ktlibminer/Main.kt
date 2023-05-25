@@ -11,16 +11,21 @@ fun main(args: Array<String>) {
         Configurations.gradleVersion = "7.5.1"
 
         val analyzedPrjStorage = HashSet<String>()
-        val extractor = SceneExtractor("java.io.File")
-        val seq = ProjectsSequence("java.io.FileReader")
+        val extractor = SceneExtractor("java.util.zip.ZipOutputStream")
+        val seq = ProjectsSequence("java.util.zip.ZipOutputStream")
 
         seq.filter { !analyzedPrjStorage.contains(it.name) }.map {
             analyzedPrjStorage.add(it.name)
             println(it.name)
-            val localPrj = it.cloneTo(Path("D:/ktlibminer/reps/" + it.name.replace('/', '_')))
-            if (localPrj.jar != null) extractor.runAnalyze(localPrj.jar)
+            val localPrj = it.cloneTo(Path("D:/ktlibminertest/reps/" + it.name.replace('/', '_')))
+            println(localPrj.path)
+            if (localPrj.jar != null) {
+                println("JAR!")
+                extractor.runAnalyze(localPrj.jar)
+            }
             else {
                 val jars = localPrj.build()
+                println(jars)
                 jars.forEach { jar ->
                     extractor.runAnalyze(jar.toString())
                 }
@@ -28,9 +33,9 @@ fun main(args: Array<String>) {
             localPrj.delete()
         }.take(100).last()
 
-        FSMInference("D:/ktlibminer/").inferenceAll()
+        FSMInference("D:/ktlibminertest/").inferenceAll()
     } catch (e: Exception) {
-        println(e)
+        throw e
     } finally {
         DatabaseController.closeConnection()
     }

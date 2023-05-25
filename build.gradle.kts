@@ -28,21 +28,21 @@ dependencies {
 
     implementation("org.gradle:gradle-tooling-api:$toolingApiVersion")
     implementation("org.apache.maven.shared:maven-verifier:2.0.0-M1")
-    implementation("org.soot-oss:soot:4.4.0-SNAPSHOT")
-    // implementation("de.upb.cs.swt:heros:1.2.3")
+    implementation("org.soot-oss:soot:4.4.1")
 
     implementation("org.xerial:sqlite-jdbc:3.41.2.1")
 
     testImplementation(kotlin("test"))
 
-    runtimeOnly("org.slf4j:slf4j-simple:2.0.4")
 
     implementation(files("libs/mint-core-1.0.0-jar-with-dependencies.jar"))
     implementation(files("libs/mint-inference-1.2.0-jar-with-dependencies.jar"))
     implementation(files("libs/mint-testgen-1.1.0-jar-with-dependencies.jar"))
 
-    implementation("com.eclipsesource.j2v8:j2v8_linux_x86_64:4.6.0")
+    implementation("com.eclipsesource.j2v8:j2v8_linux_x86_64:4.8.0")
     implementation("guru.nidi:graphviz-java-all-j2v8:0.18.1")
+
+    implementation("org.eclipse.jgit:org.eclipse.jgit:6.5.0.202303070854-r")
 }
 
 

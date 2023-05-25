@@ -25,20 +25,7 @@ class LocalRepository(val path: Path, val jar: String?) {
 
     @Throws(IOException::class)
     fun delete() {
-        Files.walkFileTree(path, object : SimpleFileVisitor<Path>() {
-            @Throws(IOException::class)
-            override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                Files.setAttribute(file, "dos:readonly", false)
-                Files.delete(file)
-                return FileVisitResult.CONTINUE
-            }
-
-            @Throws(IOException::class)
-            override fun postVisitDirectory(dir: Path, exc: IOException): FileVisitResult {
-                Files.delete(dir)
-                return FileVisitResult.CONTINUE
-            }
-        })
+        File(path.toString()).deleteRecursively()
     }
 
     private fun buildDir(dir: Path): Boolean {
@@ -54,7 +41,7 @@ class LocalRepository(val path: Path, val jar: String?) {
     * */
     private fun scanAndBuild(path: Path): Boolean {
         var res = false
-        Files.list(path).filter { Files.isDirectory(it) }.forEach {
+        Files.walk(path).filter { Files.isDirectory(it) }.forEach {
             val built = buildDir(it)
             if (built) res = true
         }
@@ -90,6 +77,11 @@ class LocalRepository(val path: Path, val jar: String?) {
             v.addCliArguments("clean")
             v.addCliArguments("package")
             v.addCliArguments("-DskipTests")
+            v.addCliArguments("-Dmaven.javadoc.skip=true")
+            v.addCliArguments("-Dadditionalparam=-Xdoclint:none")
+            v.addCliArguments("-DadditionalJOption=-Xdoclint:none")
+            v.addCliArguments("-DadditionalOption=-Xdoclint:none")
+            v.addCliArguments("-Ddoclint=none")
             v.execute()
             true
         } catch (e: Exception) {
@@ -114,7 +106,7 @@ class LocalRepository(val path: Path, val jar: String?) {
                 jars.addAll(findJarByType(it, type))
             }
         }
-        return jars.distinctBy { it.name }
+        return jars.distinctBy { it.name }.filterNot { it.name == "gradle-wrapper.jar" }
     }
 
     @OptIn(ExperimentalPathApi::class)

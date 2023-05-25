@@ -3,6 +3,7 @@ package me.valer.ktlibminer.repository
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import me.valer.ktlibminer.Configurations
+import org.eclipse.jgit.api.Git
 import java.io.*
 import java.net.URL
 import java.nio.file.Files
@@ -54,6 +55,7 @@ class RemoteRepository(var url: String, var name: String) {
         var jarName: String? = null
         val downloadURL = getAssets(Configurations.ghToken!!)
         if (downloadURL != null) {
+            println("this!!!!1")
             Files.createDirectories(path)
             val fileBytes = URL(downloadURL).readBytes()
             var remoteName = downloadURL.split('/').last()
@@ -67,9 +69,26 @@ class RemoteRepository(var url: String, var name: String) {
                 Files.delete(Path(fileName))
             } else jarName = fileName
         } else {
-            val proc = ProcessBuilder("git", "clone", "--depth=1", "--recurse-submodules", url, path.toString()).start()
-            proc.waitFor()
-            proc.destroy()
+            println("this")
+            val git = Git.cloneRepository()
+                .setDepth(1)
+                .setCloneSubmodules(true)
+                .setURI(url)
+                .setDirectory(path.toFile())
+                .call().close()
+
+
+//            ProcessBuilder(
+//                "git",
+//                "clone",
+//                "--depth=1",
+//                "--recurse-submodules",
+//                url,
+//                "$path",
+//                "&&",
+//                "echo",
+//                "\"ok\""
+//            ).start().waitFor()
         }
         return LocalRepository(path, jarName)
     }
@@ -101,16 +120,11 @@ class RemoteRepository(var url: String, var name: String) {
 
     @Throws(IOException::class)
     private fun extractFile(inputStream: InputStream, destFilePath: String) {
-        val bos = BufferedOutputStream(FileOutputStream(destFilePath))
-        val bytesIn = ByteArray(BUFFER_SIZE)
-        var read: Int
-        while (inputStream.read(bytesIn).also { read = it } != -1) {
-            bos.write(bytesIn, 0, read)
+        File(destFilePath).outputStream().use { output ->
+            inputStream.copyTo(output)
         }
-        bos.close()
     }
-
-    private val BUFFER_SIZE = 4096
 
 
 }
+

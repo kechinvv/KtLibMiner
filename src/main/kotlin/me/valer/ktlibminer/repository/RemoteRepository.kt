@@ -82,19 +82,6 @@ class RemoteRepository(var url: String, var name: String, val client: OkHttpClie
                 .setURI(url)
                 .setDirectory(path.toFile())
                 .call().close()
-
-
-//            ProcessBuilder(
-//                "git",
-//                "clone",
-//                "--depth=1",
-//                "--recurse-submodules",
-//                url,
-//                "$path",
-//                "&&",
-//                "echo",
-//                "\"ok\""
-//            ).start().waitFor()
         }
         return LocalRepository(path, jarName)
     }

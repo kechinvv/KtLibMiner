@@ -28,10 +28,15 @@ class RemoteRepository(var url: String, var name: String, val client: OkHttpClie
         name = name.replace("\"", "")
     }
 
-    fun getAssets(token: String): String? {
+    fun hasJar(): Boolean {
+        val link = getAssets()
+        return link != null && link.endsWith(".jar")
+    }
+
+    fun getAssets(): String? {
         val request = Request.Builder()
             .url("https://api.github.com/repos/$name/releases/latest")
-            .addHeader("Authorization", "Bearer $token")
+            .addHeader("Authorization", "Bearer ${Configurations.ghToken}")
             .addHeader("Accept", "application/vnd.github+json")
             .build()
         val response = client.newCall(request).execute().body?.string()
@@ -58,7 +63,7 @@ class RemoteRepository(var url: String, var name: String, val client: OkHttpClie
     @Throws(InterruptedException::class, IOException::class)
     fun cloneTo(path: Path): LocalRepository {
         var jarName: String? = null
-        val downloadURL = getAssets(Configurations.ghToken!!)
+        val downloadURL = getAssets()
         if (downloadURL != null) {
             println("this!!!!1")
             Files.createDirectories(path)

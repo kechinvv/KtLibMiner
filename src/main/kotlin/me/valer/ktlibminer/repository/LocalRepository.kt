@@ -30,9 +30,10 @@ class LocalRepository(val path: Path, val jar: String?) {
 
     private fun buildDir(dir: Path): Boolean {
         return if (Files.exists(Paths.get("$dir/pom.xml"))) buildMaven(dir)
-        else if (Files.exists(Paths.get("$dir/build.gradle.kts")) || Files.exists(Paths.get("$dir/build.gradle"))) buildGradle(
-            dir
-        )
+        else if (Files.exists(Paths.get("$dir/build.gradle"))) buildGradle(dir)
+//        else if (Files.exists(Paths.get("$dir/build.gradle.kts")) || Files.exists(Paths.get("$dir/build.gradle"))) buildGradle(
+//            dir
+//        )
         else false
     }
 

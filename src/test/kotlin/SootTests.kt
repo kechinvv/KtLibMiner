@@ -22,15 +22,9 @@ class SootTests {
     fun testCreatorICFG() {
         DatabaseController.initDB()
         val classpath = "C:\\Users\\valer\\IdeaProjects\\libminer_test\\build\\libs\\libminer_test-1.0-SNAPSHOT.jar"
-        // CreatorICFG.javaPaths = "C:/Program Files/Java/jdk1.8.0_261/jre/lib/rt.jar;"
-        // val classpath = "C:\\Users\\valer\\IdeaProjects\\KtLibMiner\\build\\classes\\kotlin\\test"
         val extractor = SceneExtractor("java.io.File")
         extractor.runAnalyze(classpath)
         DatabaseController.closeConnection()
-        //println(CreatorICFG.icfg)
-        //dotIcfg = DotGraph("")
-        // graphTraverse(CreatorICFG.startPoint, CreatorICFG.icfg)
-        // CreatorICFG.mainMethod?.let { visit(CreatorICFG.callGraph, it) }
     }
 
     @Test
@@ -46,6 +40,5 @@ class SootTests {
             )
         )
     }
-
 
 }

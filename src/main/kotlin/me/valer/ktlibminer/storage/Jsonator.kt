@@ -2,17 +2,14 @@ package me.valer.ktlibminer.storage
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
-import soot.Unit
-import soot.jimple.internal.AbstractStmt
-import soot.jimple.internal.JAssignStmt
-import soot.jimple.internal.JInvokeStmt
+import soot.jimple.InvokeExpr
 
 object Jsonator {
 
-    fun traceToJson(trace: List<AbstractStmt>): String? {
+    fun traceToJson(trace: List<InvokeExpr>): String? {
         val invokeTrace: MutableList<Invoke> = mutableListOf()
         for (item in trace) {
-            invokeTrace.add(Invoke(item.invokeExpr.method))
+            invokeTrace.add(Invoke(item.method))
         }
         val json = GsonBuilder().disableHtmlEscaping().create().toJson(invokeTrace)
         return json

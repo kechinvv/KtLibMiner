@@ -8,7 +8,7 @@ import kotlin.io.path.Path
 fun main(args: Array<String>) {
     DatabaseController.initDB()
     try {
-        Configurations.ghToken = System.getenv("token") ?: "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"
+        Configurations.ghToken = System.getenv("token")
         Configurations.gradleVersion = "7.5.1"
         val client = OkHttpClient()
 
@@ -19,7 +19,9 @@ fun main(args: Array<String>) {
         seq.filter { !analyzedPrjStorage.contains(it.name) }.map {
             analyzedPrjStorage.add(it.name)
             println(it.name)
+            if (!it.hasJar()) return@map
             val localPrj = it.cloneTo(Path("D:/ktlibminertest/reps/" + it.name.replace('/', '_')))
+
             println(localPrj.path)
             if (localPrj.jar != null) {
                 println("JAR!")

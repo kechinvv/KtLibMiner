@@ -5,6 +5,7 @@ import me.valer.ktlibminer.storage.DatabaseController
 import me.valer.ktlibminer.storage.Jsonator
 import soot.*
 import soot.Unit
+import soot.jimple.InvokeExpr
 import soot.jimple.internal.AbstractStmt
 import soot.jimple.internal.JAssignStmt
 import soot.jimple.internal.JInvokeStmt
@@ -15,8 +16,7 @@ import soot.options.Options
 
 class SceneExtractor(var lib: String) {
     var icfg: InterproceduralCFG<Unit, SootMethod>? = null
-    var allFullTraces = mutableListOf<MutableList<AbstractStmt>>(mutableListOf())
-    var extractedTraces = HashSet<List<AbstractStmt>>()
+    var allFullTraces = mutableListOf<MutableList<InvokeExpr>>(mutableListOf())
 
     var mainMethod: SootMethod? = null
 
@@ -44,51 +44,31 @@ class SceneExtractor(var lib: String) {
 
                         Scene.v().entryPoints = arrayListOf(mainMethod)
                         icfg = JimpleBasedInterproceduralCFG()
+                        analysis = Scene.v().pointsToAnalysis as PAG
 
                         println("Entry Points are: ")
                         println(icfg!!.getStartPointsOf(mainMethod))
+
                         icfg!!.getStartPointsOf(mainMethod).forEach { startPoint ->
                             println("START POINT SET")
                             println(icfg!!.getSuccsOf(startPoint))
-
                             allFullTraces = mutableListOf(mutableListOf())
-                            graphTraverseLib(startPoint)
-                            allFullTraces = allFullTraces.distinct() as MutableList<MutableList<AbstractStmt>>
-                            allFullTraces.forEach {
-                                //println(it)
-                                it.forEach { invoke ->
-                                    DatabaseController.addMethod(
-                                        invoke.invokeExpr.method.name,
-                                        invoke.invokeExpr.method.declaringClass.toString().replace(".", "+"),
-                                    )
-                                }
-                            }
 
-                            analysis = Scene.v().pointsToAnalysis as PAG
-                            extractedTraces = sequenceExtracting(allFullTraces).filter { it.size > 1 }.toHashSet()
-                            extractedTraces.forEach {
-                                //println(it)
-                                val indicator = it.first()
-                                var inpClass = indicator.invokeExpr.method.declaringClass.toString().replace(".", "+")
-                                if (indicator.invokeExpr.method.isStatic) inpClass += "__s"
-                                val jsonData = Jsonator.traceToJson(it)
-                                //println(jsonData)
-                                DatabaseController.addTrace(jsonData!!, inpClass)
-                            }
+                            graphTraverseLib(startPoint)
                         }
                     } else {
-                        println(Scene.v().classes)
+                        println("App classes = " + Scene.v().applicationClasses.size)
                         println("Not a malware with main method")
                     }
                 }
             }))
     }
 
-    fun sequenceExtracting(allTraces: List<List<AbstractStmt>>): HashSet<List<AbstractStmt>> {
-        val extractedTracesRet = HashSet<List<AbstractStmt>>(mutableListOf())
+    fun sequenceExtracting(allTraces: List<List<InvokeExpr>>): HashSet<List<InvokeExpr>> {
+        val extractedTracesRet = HashSet<List<InvokeExpr>>(mutableListOf())
         for (trace in allTraces) {
             if (trace.size < 2) continue
-            val (traceStatic, traceCopy) = trace.partition { it.invokeExpr.method.isStatic }
+            val (traceStatic, traceCopy) = trace.partition { it.method.isStatic }
 
             val staticExtracted = staticExtracting(traceStatic.toMutableList())
             extractedTracesRet.addAll(staticExtracted)
@@ -98,13 +78,13 @@ class SceneExtractor(var lib: String) {
         return extractedTracesRet
     }
 
-    private fun staticExtracting(traceStatic: MutableList<AbstractStmt>): HashSet<List<AbstractStmt>> {
-        val extractedTracesRet = HashSet<List<AbstractStmt>>(mutableListOf())
+    private fun staticExtracting(traceStatic: MutableList<InvokeExpr>): HashSet<List<InvokeExpr>> {
+        val extractedTracesRet = HashSet<List<InvokeExpr>>(mutableListOf())
         while (traceStatic.isNotEmpty()) {
-            val collector = mutableListOf<AbstractStmt>()
-            val invokeClass = traceStatic.first().invokeExpr.method.declaringClass
+            val collector = mutableListOf<InvokeExpr>()
+            val invokeClass = traceStatic.first().method.declaringClass
             for (statInvoke in traceStatic) {
-                if (statInvoke.invokeExpr.method.declaringClass == invokeClass) collector.add(statInvoke)
+                if (statInvoke.method.declaringClass == invokeClass) collector.add(statInvoke)
             }
             extractedTracesRet.add(collector)
             traceStatic.removeAll(collector)
@@ -112,10 +92,10 @@ class SceneExtractor(var lib: String) {
         return extractedTracesRet
     }
 
-    private fun invokeExtracting(traceCopy: MutableList<AbstractStmt>): HashSet<List<AbstractStmt>> {
-        val extractedTracesRet = HashSet<List<AbstractStmt>>(mutableListOf())
+    private fun invokeExtracting(traceCopy: MutableList<InvokeExpr>): HashSet<List<InvokeExpr>> {
+        val extractedTracesRet = HashSet<List<InvokeExpr>>(mutableListOf())
         while (traceCopy.size > 1) {
-            var collector = mutableListOf<AbstractStmt>()
+            var collector = mutableListOf<InvokeExpr>()
             val firstCallInd = 0
             var secondCallInd = 1
             var obj1 = traceCopy[firstCallInd]
@@ -126,7 +106,7 @@ class SceneExtractor(var lib: String) {
                 val obj2PT = getPointsTo(obj2)
 
                 val resAlias = obj1PT.hasNonEmptyIntersection(obj2PT)
-                val sameClass = obj1.invokeExpr.method.declaringClass == obj2.invokeExpr.method.declaringClass
+                val sameClass = obj1.method.declaringClass == obj2.method.declaringClass
 
                 // println("$obj1 to $obj2 = $resAlias")
 
@@ -159,17 +139,31 @@ class SceneExtractor(var lib: String) {
 
     fun graphTraverseLib(
         startPoint: Unit,
-        ttl: Int = 100,
+        ttl: Int = 1000,
+        isMethod: Boolean = false
     ) {
+        //println(icfg?.getPredsOf(startPoint))
         val currentSuccessors = icfg!!.getSuccsOf(startPoint)
+        //val  method = icfg!!.getMethodOf(startPoint)
+        //println("PARENT = $startPoint NAME = ${method.signature} METHOD = $isMethod SUCCS SIZE = ${currentSuccessors.size}")
         if (currentSuccessors.size == 0 || ttl <= 0) {
+            if (!isMethod) {
+                val traceIterator = allFullTraces.iterator()
+                while (traceIterator.hasNext()) {
+                    val trace = traceIterator.next()
+                    if (trace.isNotEmpty()) {
+                        println(trace)
+                        extractSoloWay(trace)
+                        traceIterator.remove()
+                    }
+                }
+            }
             return
-            // println("Traversal complete")
         } else {
             //println("List of sucs: $currentSuccessors       len: ${currentSuccessors.size}")
             val traceOrig = allFullTraces.last().toMutableList()
             for (succ in currentSuccessors) {
-                //println("Succesor: $succ        Class: ${succ.javaClass}")
+                //println("Succesor: $succ        Class: ${icfg!!.getMethodOf(succ).signature}")
                 var method: SootMethod? = null
                 try {
                     if (succ is JInvokeStmt || succ is JAssignStmt) {
@@ -177,44 +171,55 @@ class SceneExtractor(var lib: String) {
                         if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
                             method = succ.invokeExpr.method
                         if (succ.invokeExpr.method.declaringClass.toString().startsWith(lib)) allFullTraces.last()
-                            .add(succ)
+                            .add(succ.invokeExpr)
                     }
-                    if (method != null) {
+                    if (method != null && method.declaringClass in Scene.v().applicationClasses) {
                         val methodStart = icfg!!.getStartPointsOf(method).first()
-                        graphTraverseLib(methodStart, ttl - 1)
+                        graphTraverseLib(methodStart, ttl - 1, true)
                     }
 
                 } catch (_: Exception) {
                 }
-                graphTraverseLib(succ, ttl)
+                graphTraverseLib(succ, ttl-1, isMethod)
                 if (currentSuccessors.indexOf(succ) != currentSuccessors.size - 1) allFullTraces.add(traceOrig)
             }
         }
     }
 
 
+    fun extractSoloWay(trace: List<InvokeExpr>) {
+        trace.forEach { invoke ->
+            DatabaseController.addMethod(
+                invoke.method.name,
+                invoke.method.declaringClass.toString().replace(".", "+"),
+            )
+        }
+
+        val extractedTraces = sequenceExtracting(listOf(trace)).filter { it.size > 1 }.toHashSet()
+        extractedTraces.forEach {
+            // println(it)
+            val indicator = it.first()
+            var inpClass = indicator.method.declaringClass.toString().replace(".", "+")
+            if (indicator.method.isStatic) inpClass += "__s"
+            val jsonData = Jsonator.traceToJson(it)
+            //println(jsonData)
+            DatabaseController.addTrace(jsonData!!, inpClass)
+        }
+
+    }
+
     fun runAnalyze(classpath: String): Boolean {
         try {
-//            val args = arrayOf(
-//                "-w",
-//                "-pp",
-//                "-allow-phantom-refs",
-//                "-src-prec",
-//                "only-class",
-//                "-process-dir",
-//                classpath,
-//                "-p",
-//                "cg.spark",
-//                "enabled:true,verbose:true"
-//            )
-//             Main.main(args)
-            Options.v().set_prepend_classpath(true);
+            Options.v().set_prepend_classpath(true)
             Options.v().set_whole_program(true)
             Options.v().set_allow_phantom_refs(true)
             Options.v().set_src_prec(2)
+            //Options.v().set_soot_classpath(listOf(classpath).joinToString(";"))
             Options.v().set_process_dir(listOf(classpath))
+            //Options.v().set_output_format(Options.output_format_jimple);
             Options.v().setPhaseOption("cg.spark", "enabled:true")
             Options.v().setPhaseOption("cg.spark", "verbose:true")
+            Scene.v().loadBasicClasses()
             Scene.v().loadNecessaryClasses()
             PackManager.v().runPacks().runCatching { }
             return true
@@ -227,7 +232,7 @@ class SceneExtractor(var lib: String) {
         }
     }
 
-    private fun getPointsTo(stmt: AbstractStmt): PointsToSet {
-        return analysis.reachingObjects(stmt.invokeExpr.useBoxes[0].value as Local)
+    private fun getPointsTo(inv: InvokeExpr): PointsToSet {
+        return analysis.reachingObjects(inv.useBoxes[0].value as Local)
     }
 }

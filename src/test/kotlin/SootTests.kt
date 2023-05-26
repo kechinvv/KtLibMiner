@@ -1,5 +1,6 @@
 import heros.InterproceduralCFG
 import me.valer.ktlibminer.SceneExtractor
+import me.valer.ktlibminer.storage.DatabaseController
 import mint.app.Mint
 import org.junit.jupiter.api.Test
 import soot.*
@@ -19,10 +20,13 @@ class SootTests {
 
     @Test
     fun testCreatorICFG() {
+        DatabaseController.initDB()
         val classpath = "C:\\Users\\valer\\IdeaProjects\\libminer_test\\build\\libs\\libminer_test-1.0-SNAPSHOT.jar"
         // CreatorICFG.javaPaths = "C:/Program Files/Java/jdk1.8.0_261/jre/lib/rt.jar;"
+        // val classpath = "C:\\Users\\valer\\IdeaProjects\\KtLibMiner\\build\\classes\\kotlin\\test"
         val extractor = SceneExtractor("java.io.File")
         extractor.runAnalyze(classpath)
+        DatabaseController.closeConnection()
         //println(CreatorICFG.icfg)
         //dotIcfg = DotGraph("")
         // graphTraverse(CreatorICFG.startPoint, CreatorICFG.icfg)

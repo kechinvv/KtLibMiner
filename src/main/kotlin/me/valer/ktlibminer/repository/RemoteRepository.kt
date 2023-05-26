@@ -3,6 +3,8 @@ package me.valer.ktlibminer.repository
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import me.valer.ktlibminer.Configurations
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.eclipse.jgit.api.Git
 import java.io.*
 import java.net.URL
@@ -13,12 +15,12 @@ import kotlin.io.path.Path
 import kotlin.io.path.notExists
 
 
-class RemoteRepository(var url: String, var name: String) {
+class RemoteRepository(var url: String, var name: String, val client: OkHttpClient) {
 
-
-    constructor(repoJSON: JsonObject) : this(
+    constructor(repoJSON: JsonObject, client: OkHttpClient) : this(
         repoJSON.get("html_url").toString(),
-        repoJSON.get("full_name").toString()
+        repoJSON.get("full_name").toString(),
+        client
     )
 
     init {
@@ -27,10 +29,12 @@ class RemoteRepository(var url: String, var name: String) {
     }
 
     fun getAssets(token: String): String? {
-        val response = khttp.get(
-            url = "https://api.github.com/repos/$name/releases/latest",
-            headers = mapOf("Authorization" to "Bearer $token", "Accept" to "application/vnd.github+json")
-        ).text
+        val request = Request.Builder()
+            .url("https://api.github.com/repos/$name/releases/latest")
+            .addHeader("Authorization", "Bearer $token")
+            .addHeader("Accept", "application/vnd.github+json")
+            .build()
+        val response = client.newCall(request).execute().body?.string()
         val json = JsonParser.parseString(response).asJsonObject
         if (json.has("assets")) {
             val jsonAssets = json.getAsJsonArray("assets")

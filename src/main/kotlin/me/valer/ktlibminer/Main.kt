@@ -2,17 +2,19 @@ package me.valer.ktlibminer
 
 import me.valer.ktlibminer.inference.FSMInference
 import me.valer.ktlibminer.storage.DatabaseController
+import okhttp3.OkHttpClient
 import kotlin.io.path.Path
 
 fun main(args: Array<String>) {
     DatabaseController.initDB()
     try {
-        Configurations.ghToken = System.getenv("token")
+        Configurations.ghToken = System.getenv("token") ?: "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"
         Configurations.gradleVersion = "7.5.1"
+        val client = OkHttpClient()
 
         val analyzedPrjStorage = HashSet<String>()
         val extractor = SceneExtractor("java.util.zip.ZipOutputStream")
-        val seq = ProjectsSequence("java.util.zip.ZipOutputStream")
+        val seq = ProjectsSequence("java.util.zip.ZipOutputStream", client)
 
         seq.filter { !analyzedPrjStorage.contains(it.name) }.map {
             analyzedPrjStorage.add(it.name)
@@ -22,8 +24,7 @@ fun main(args: Array<String>) {
             if (localPrj.jar != null) {
                 println("JAR!")
                 extractor.runAnalyze(localPrj.jar)
-            }
-            else {
+            } else {
                 val jars = localPrj.build()
                 println(jars)
                 jars.forEach { jar ->
@@ -35,8 +36,7 @@ fun main(args: Array<String>) {
 
         FSMInference("D:/ktlibminertest/").inferenceAll()
     } catch (e: Exception) {
-        println(e)
-        println(e.stackTrace)
+        throw e
     } finally {
         DatabaseController.closeConnection()
     }

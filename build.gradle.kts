@@ -23,7 +23,6 @@ repositories {
 
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.7.20")
-    implementation("khttp:khttp:0.1.0")
     implementation("com.google.code.gson:gson:2.10.1")
 
     implementation("org.gradle:gradle-tooling-api:$toolingApiVersion")
@@ -44,6 +43,8 @@ dependencies {
     implementation("guru.nidi:graphviz-java-all-j2v8:0.18.1")
 
     implementation("org.eclipse.jgit:org.eclipse.jgit:6.5.0.202303070854-r")
+
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
 }
 
 
@@ -52,6 +53,3 @@ tasks.test {
     useJUnitPlatform()
 }
 
-tasks.withType<KotlinCompile>() {
-    kotlinOptions.jvmTarget = "1.8"
-}

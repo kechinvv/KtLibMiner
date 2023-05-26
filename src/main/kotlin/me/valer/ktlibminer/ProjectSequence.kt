@@ -3,6 +3,9 @@ package me.valer.ktlibminer
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import me.valer.ktlibminer.repository.RemoteRepository
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 const val SLEEP: Long = 30_000
 const val maxBound = 20000
@@ -10,7 +13,7 @@ const val maxPage = 10
 const val maxRes = 1000
 const val linkGH = "https://api.github.com/search/code"
 
-class ProjectsSequence(val lib: String) : Sequence<RemoteRepository> {
+class ProjectsSequence(val lib: String, val client: OkHttpClient) : Sequence<RemoteRepository> {
     private var page = 1
     private var lbound = 0
     private var rbound = 50
@@ -39,15 +42,15 @@ class ProjectsSequence(val lib: String) : Sequence<RemoteRepository> {
     }
 
     private fun makeRequest(): String {
-        return khttp.get(
-            url = linkGH,
-            params = mapOf(
-                "q" to "$lib in:file language:java size:$lbound..$rbound",
-                "per_page" to "100",
-                "page" to page.toString()
-            ),
-            headers = mapOf("Authorization" to "Token ${Configurations.ghToken}")
-        ).text
+        val queryUrlBuilder = linkGH.toHttpUrl().newBuilder()
+            .addQueryParameter("q", "$lib in:file language:java size:$lbound..$rbound")
+            .addQueryParameter("per_page", "100")
+            .addQueryParameter("page", page.toString())
+        val request = Request.Builder()
+            .url(queryUrlBuilder.build())
+            .addHeader("Authorization", "Token ${Configurations.ghToken}")
+            .build()
+        return client.newCall(request).execute().body?.string() ?: ""
     }
 
     private fun getReps(json: JsonObject): List<RemoteRepository> {
@@ -67,7 +70,7 @@ class ProjectsSequence(val lib: String) : Sequence<RemoteRepository> {
                 nextBounds()
                 page = 1
             } else {
-                items.forEach { reps.add(RemoteRepository((it as JsonObject).get("repository") as JsonObject)) }
+                items.forEach { reps.add(RemoteRepository((it as JsonObject).get("repository") as JsonObject, client)) }
                 total += reps.size
                 page++
             }

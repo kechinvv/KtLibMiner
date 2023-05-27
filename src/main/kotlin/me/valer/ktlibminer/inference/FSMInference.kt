@@ -68,7 +68,7 @@ class FSMInference(val mintFilesPath: String, val jsonAndDotFilesPath: String = 
             methods.forEach {
                 Files.write(Paths.get(path), listOf(it), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
             }
-            Files.write(Paths.get(path), listOf("end"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
+           // Files.write(Paths.get(path), listOf("end"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
         } catch (e: IOException) {
             println(e)
         }
@@ -87,7 +87,7 @@ class FSMInference(val mintFilesPath: String, val jsonAndDotFilesPath: String = 
                     StandardOpenOption.APPEND
                 )
             }
-            Files.write(Paths.get(filePath), listOf("end"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
+           // Files.write(Paths.get(filePath), listOf("end"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
         } catch (e: IOException) {
             println(e)
         }

@@ -65,7 +65,6 @@ class RemoteRepository(var url: String, var name: String, val client: OkHttpClie
         var jarName: String? = null
         val downloadURL = getAssets()
         if (downloadURL != null) {
-            println("this!!!!1")
             Files.createDirectories(path)
             val fileBytes = URL(downloadURL).readBytes()
             var remoteName = downloadURL.split('/').last()
@@ -79,8 +78,6 @@ class RemoteRepository(var url: String, var name: String, val client: OkHttpClie
                 Files.delete(Path(fileName))
             } else jarName = fileName
         } else {
-            println("this")
-
             if (path.notExists()) Git.cloneRepository()
                 .setDepth(1)
                 .setCloneSubmodules(true)

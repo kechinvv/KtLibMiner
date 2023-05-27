@@ -23,7 +23,7 @@ class SceneExtractor(var lib: String) {
 
     lateinit var analysis: PAG
 
-    init {
+    fun init() {
         G.reset()
         if (!PackManager.v().hasPack("wjtp.ifds")) PackManager.v().getPack("wjtp")
             .add(Transform("wjtp.ifds", object : SceneTransformer() {
@@ -152,7 +152,7 @@ class SceneExtractor(var lib: String) {
                 while (traceIterator.hasNext()) {
                     val trace = traceIterator.next()
                     if (trace.isNotEmpty()) {
-                        println(trace)
+                        //println(trace)
                         extractSoloWay(trace)
                         traceIterator.remove()
                     }
@@ -180,7 +180,7 @@ class SceneExtractor(var lib: String) {
 
                 } catch (_: Exception) {
                 }
-                graphTraverseLib(succ, ttl-1, isMethod)
+                graphTraverseLib(succ, ttl - 1, isMethod)
                 if (currentSuccessors.indexOf(succ) != currentSuccessors.size - 1) allFullTraces.add(traceOrig)
             }
         }
@@ -210,13 +210,14 @@ class SceneExtractor(var lib: String) {
 
     fun runAnalyze(classpath: String): Boolean {
         try {
+            init()
             Options.v().set_prepend_classpath(true)
             Options.v().set_whole_program(true)
             Options.v().set_allow_phantom_refs(true)
             Options.v().set_src_prec(2)
             //Options.v().set_soot_classpath(listOf(classpath).joinToString(";"))
             Options.v().set_process_dir(listOf(classpath))
-            //Options.v().set_output_format(Options.output_format_jimple);
+            Options.v().set_output_format(Options.output_format_jimple);
             Options.v().setPhaseOption("cg.spark", "enabled:true")
             Options.v().setPhaseOption("cg.spark", "verbose:true")
             Scene.v().loadBasicClasses()

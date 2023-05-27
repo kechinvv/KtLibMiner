@@ -1,9 +1,11 @@
-package me.valer.ktlibminer
+package me.valer.ktlibminer.config
 
 object Configurations {
     var mavenPath: String? = null
     var gradlePath: String? = null
     var gradleVersion: String? = null
     var ghToken: String? = null
-    var kInf = 2
+    var kAlg = 2
+    var traversJumps = 1000
+    var traceNode = TraceNode.NAME
 }

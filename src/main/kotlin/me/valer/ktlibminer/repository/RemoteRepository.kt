@@ -2,7 +2,7 @@ package me.valer.ktlibminer.repository
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import me.valer.ktlibminer.Configurations
+import me.valer.ktlibminer.config.Configurations
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.eclipse.jgit.api.Git

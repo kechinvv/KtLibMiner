@@ -1,13 +1,12 @@
 package me.valer.ktlibminer.repository
 
-import me.valer.ktlibminer.Configurations
+import me.valer.ktlibminer.config.Configurations
 import org.apache.maven.shared.verifier.Verifier
 import org.gradle.tooling.GradleConnector
 import soot.*
 import java.io.File
 import java.io.IOException
 import java.nio.file.*
-import java.nio.file.attribute.BasicFileAttributes
 import kotlin.io.path.*
 
 

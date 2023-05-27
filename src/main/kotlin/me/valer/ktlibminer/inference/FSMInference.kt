@@ -1,12 +1,13 @@
 package me.valer.ktlibminer.inference
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import guru.nidi.graphviz.parse.Parser
-import me.valer.ktlibminer.Configurations
+import me.valer.ktlibminer.config.Configurations
 import me.valer.ktlibminer.storage.DatabaseController.getClasses
 import me.valer.ktlibminer.storage.DatabaseController.getMethodsForClass
 import me.valer.ktlibminer.storage.DatabaseController.getTraceById
 import me.valer.ktlibminer.storage.DatabaseController.getTracesIdForClass
-import me.valer.ktlibminer.storage.Jsonator.jsonToTrace
 import mint.app.Mint
 import java.io.File
 import java.io.IOException
@@ -22,7 +23,7 @@ class FSMInference(val mintFilesPath: String, val jsonAndDotFilesPath: String = 
     fun inferenceAll() {
         val klasses = getClasses()
         klasses.forEach {
-            inferenceByClass(it)
+            inferenceByClass(it.replace(".", "+"))
         }
     }
 
@@ -47,7 +48,7 @@ class FSMInference(val mintFilesPath: String, val jsonAndDotFilesPath: String = 
                 "-input",
                 pathIn,
                 "-k",
-                Configurations.kInf.toString(),
+                Configurations.kAlg.toString(),
                 "-visout",
                 pathOut
             )
@@ -76,13 +77,13 @@ class FSMInference(val mintFilesPath: String, val jsonAndDotFilesPath: String = 
     }
 
     fun updateFileTrace(jsonTrace: String, filePath: String) {
-        val realTrace = jsonToTrace(jsonTrace)
+        val realTrace: List<String> = Gson().fromJson(jsonTrace, object : TypeToken<List<String>>() {}.type)
         try {
             Files.write(Paths.get(filePath), listOf("trace"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
             realTrace.forEach {
                 Files.write(
                     Paths.get(filePath),
-                    listOf(it.methodName),
+                    listOf(it),
                     StandardCharsets.UTF_8,
                     StandardOpenOption.APPEND
                 )

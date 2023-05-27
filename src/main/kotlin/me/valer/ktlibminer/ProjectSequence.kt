@@ -2,6 +2,7 @@ package me.valer.ktlibminer
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import me.valer.ktlibminer.config.Configurations
 import me.valer.ktlibminer.repository.RemoteRepository
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient

@@ -11,13 +11,6 @@ import soot.util.dot.DotGraph
 
 class SootTests {
 
-    var visited = ArrayList<Unit>()
-    val visited2 = HashMap<String, Boolean>()
-    var icfg: InterproceduralCFG<Unit, SootMethod>? = null
-    var argsList = ArrayList<String>()
-    var dotIcfg: DotGraph? = null
-    val endNodesStack: ArrayDeque<MutableList<Unit>>? = ArrayDeque()
-
     @Test
     fun testCreatorICFG() {
         DatabaseController.initDB()

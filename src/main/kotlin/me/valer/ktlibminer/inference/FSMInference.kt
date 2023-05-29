@@ -9,10 +9,10 @@ import me.valer.ktlibminer.storage.DatabaseController.getMethodsForClass
 import me.valer.ktlibminer.storage.DatabaseController.getTraceById
 import me.valer.ktlibminer.storage.DatabaseController.getTracesIdForClass
 import mint.app.Mint
-import java.io.File
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.Path
@@ -20,85 +20,96 @@ import kotlin.io.path.Path
 class FSMInference(val mintFilesPath: String, val jsonAndDotFilesPath: String = mintFilesPath) {
 
 
-    fun inferenceAll() {
+    fun inferenceAll(toJson: Boolean = Configurations.toJson, unionEnd: Boolean = Configurations.unionEnd) {
         val klasses = getClasses()
         klasses.forEach {
-            inferenceByClass(it.replace(".", "+"))
+            inferenceByClass(it, toJson, unionEnd)
         }
     }
 
-    fun inferenceByClass(klass: String, toJson: Boolean = true) {
+    fun inferenceByClass(klass: String, toJson: Boolean = true, unionEnd: Boolean = Configurations.unionEnd) {
         val ids = getTracesIdForClass(klass)
         val methods = getMethodsForClass(klass)
-        val filePathIn = createInputFile(methods, klass)
+        val klassStr = klass.replace(".", "+")
+        val filePathIn = createInputFile(methods, klassStr)
         ids.forEach {
             val trace = getTraceById(it)
             updateFileTrace(trace!!, filePathIn)
         }
-        val filePathOutDot = Path(jsonAndDotFilesPath, klass + "Out.dot").toString()
-        inferenceFSM(filePathIn, filePathOutDot)
-        val filePathOut = Path(jsonAndDotFilesPath, "$klass.json").toString()
-        if (toJson) dotToJson(filePathOutDot, filePathOut, klass)
+
+        val filePathOutDot = Path(jsonAndDotFilesPath, klassStr + "Out.dot")
+        Files.deleteIfExists(filePathOutDot)
+        inferenceFSM(filePathIn.toString(), filePathOutDot.toString())
+
+        val filePathOut = Path(jsonAndDotFilesPath, "$klassStr.json")
+          val fsm = dotToFSM(filePathOutDot, klass)
+        if (unionEnd) {
+            val filePathOutUnionDot = Path(jsonAndDotFilesPath, klassStr + "OutUnion.dot")
+            fsm.unionEnd()
+            fsm.toDot(filePathOutUnionDot)
+        }
+         if (toJson) fsm.toJson(filePathOut)
     }
 
-    fun inferenceFSM(pathIn: String, pathOut: String, k: Int = 2) {
+    fun inferenceFSM(pathIn: String, pathOut: String, k: Int = Configurations.kAlg) {
         Files.createDirectories(Paths.get(jsonAndDotFilesPath))
         Mint.main(
             arrayOf(
                 "-input",
                 pathIn,
                 "-k",
-                Configurations.kAlg.toString(),
+                k.toString(),
+                "-strategy",
+                "ktails",
                 "-visout",
                 pathOut
             )
         )
     }
 
-    fun createInputFile(methods: HashSet<String>, klass: String): String {
-        val path = Path(mintFilesPath, klass + "In.txt").toString()
+    fun createInputFile(methods: HashSet<String>, klass: String): Path {
+        val path = Path(mintFilesPath, klass + "In.txt")
         try {
-            Files.deleteIfExists(Paths.get(path))
+            Files.deleteIfExists(path)
             Files.write(
-                Paths.get(path),
+                path,
                 listOf("types"),
                 StandardCharsets.UTF_8,
                 StandardOpenOption.CREATE,
                 StandardOpenOption.WRITE
             )
             methods.forEach {
-                Files.write(Paths.get(path), listOf(it), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
+                Files.write(path, listOf(it), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
             }
-           // Files.write(Paths.get(path), listOf("end"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
+            // Files.write(Paths.get(path), listOf("end"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
         } catch (e: IOException) {
             println(e)
         }
         return path
     }
 
-    fun updateFileTrace(jsonTrace: String, filePath: String) {
+    fun updateFileTrace(jsonTrace: String, filePath: Path) {
         val realTrace: List<String> = Gson().fromJson(jsonTrace, object : TypeToken<List<String>>() {}.type)
         try {
-            Files.write(Paths.get(filePath), listOf("trace"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
+            Files.write(filePath, listOf("trace"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
             realTrace.forEach {
                 Files.write(
-                    Paths.get(filePath),
+                    filePath,
                     listOf(it),
                     StandardCharsets.UTF_8,
                     StandardOpenOption.APPEND
                 )
             }
-           // Files.write(Paths.get(filePath), listOf("end"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
+            // Files.write(Paths.get(filePath), listOf("end"), StandardCharsets.UTF_8, StandardOpenOption.APPEND)
         } catch (e: IOException) {
             println(e)
         }
     }
 
-    fun dotToJson(pathDot: String, pathJson: String, klass: String) {
-        val dot = File(pathDot).inputStream()
+    fun dotToFSM(pathDot: Path, klass: String): FSM {
+        val dot = pathDot.toFile().inputStream()
         val g = Parser().read(dot)
-        val fsm = FSM(klass, g.edges(), g.nodes())
-        fsm.toJson(Path(pathJson))
+        return FSM(klass, g.edges(), g.nodes())
     }
 
 }

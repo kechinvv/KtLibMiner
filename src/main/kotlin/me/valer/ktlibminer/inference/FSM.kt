@@ -1,6 +1,12 @@
 package me.valer.ktlibminer.inference
 
 import com.google.gson.GsonBuilder
+import guru.nidi.graphviz.attribute.Attributes
+import guru.nidi.graphviz.attribute.Label
+import guru.nidi.graphviz.engine.Format
+import guru.nidi.graphviz.engine.Graphviz
+import guru.nidi.graphviz.model.Factory.mutGraph
+import guru.nidi.graphviz.model.Factory.mutNode
 import guru.nidi.graphviz.model.Link
 import guru.nidi.graphviz.model.MutableNode
 import java.nio.charset.StandardCharsets
@@ -8,30 +14,21 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 
+const val initial = "initial"
+const val finish = "doublecircle"
+
 class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collection<MutableNode>) {
     val states = HashSet<State>()
-    val shifts = HashSet<Shift>()
-    private val initial = "initial"
-    private val finish = "doublecircle"
+    var shifts = HashSet<Shift>()
+    private var unhandled = true
 
 
-    fun toJson(filePath: Path) {
-        extractData()
-        val map = HashMap<String, Any>()
-        if (info.endsWith("__s")) map["class"] = info.dropLast(3).replace('+', '.')
-        else map["class"] = info.replace('+', '.')
-        map["name"] = info
-        map["shifts"] = shifts
-        map["states"] = states
-        val strJson = GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(map)
-        Files.deleteIfExists(filePath)
-        Files.write(filePath, listOf(strJson), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.WRITE)
-    }
-
-    fun extractData() {
+    init {
         nodesDot.forEach {
             if (it.name().toString() == initial) {
-                states.add(State(initial, StateType.INIT))
+                return@forEach
+            } else if (it.name().toString() == "0") {
+                states.add(State(it.name().toString(), StateType.INIT))
             } else if (it.attrs().get("shape") == finish) {
                 states.add(State(it.name().toString(), StateType.FIN))
             } else {
@@ -39,23 +36,86 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
             }
         }
         edgesDot.forEach {
+            if (it.from()!!.name().toString() == initial) return@forEach
             shifts.add(
                 Shift(
                     it.from()!!.name().toString(),
                     it.to().name().toString(),
-                    (it.attrs().get("label") ?: "").toString().split("\\n ")
+                    (it.attrs().get("label") ?: "").toString().split("\\n ").toHashSet()
                 )
             )
         }
-
-
     }
 
-    data class Shift(val from: String, val to: String, val with: List<String>) {
+    fun unionEnd() {
+        if (!unhandled) return
+        states.forEach {
+            val transition =
+                shifts.filter { shift -> it.type == StateType.FIN && shift.from == it.name && shift.to != it.name }
+            if (transition.isNotEmpty()) it.type = StateType.DEF
+        }
+        val finStates = states.filter { it.type == StateType.FIN }.toHashSet()
+        val finState = finStates.first()
+
+        finStates.forEach { state ->
+            shifts.forEach { shift ->
+                if (shift.to == state.name) shift.to = finState.name
+                if (shift.from == state.name) shift.from = finState.name
+            }
+        }
+        unionWith(finState.name)
+        shifts = shifts.distinct().toHashSet()
+        unhandled = false
+    }
+
+    fun unionWith(finName: String) {
+        val cycleShifts = shifts.filter { it.to == it.from && it.to == finName }
+        val unionWith = hashSetOf<String>()
+        cycleShifts.forEach { _ -> unionWith.addAll(unionWith) }
+        cycleShifts.forEach { it.with = unionWith }
+    }
+
+    fun toJson(filePath: Path) {
+        val map = HashMap<String, Any>()
+        if (info.endsWith("__s")) map["class"] = info.dropLast(3)
+        else map["class"] = info
+        map["name"] = info
+        map["shifts"] = shifts
+        map["states"] = states
+        val strJson = GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(map)
+        Files.deleteIfExists(filePath)
+        Files.write(
+            filePath,
+            listOf(strJson),
+            StandardCharsets.UTF_8,
+            StandardOpenOption.CREATE,
+            StandardOpenOption.WRITE
+        )
+    }
+
+    fun toDot(filePath: Path) {
+        val g = mutGraph("example1").setDirected(true).use { _, _ ->
+            states.forEach {
+                if (it.type == StateType.FIN) mutNode(it.name).add(Attributes.attr("shape", finish))
+                else mutNode(it.name)
+            }
+            shifts.forEach {
+                val link = mutNode(it.from).linkTo(mutNode(it.to)).with(Label.of(it.withToLabel()))
+                mutNode(it.from).addLink(link)
+            }
+        }
+        println(g.nodes())
+        Graphviz.fromGraph(g).render(Format.DOT).toFile(filePath.toFile())
+    }
+
+
+    data class Shift(var from: String, var to: String, var with: HashSet<String>) {
         override fun toString(): String = "{from: ${from}, to: ${to}, with: ${with}}"
+
+        fun withToLabel(): String = with.joinToString("\\n ")
     }
 
-    data class State(val name: String, val type: StateType) {
+    data class State(val name: String, var type: StateType) {
         override fun toString(): String = "{name: ${name}, type: ${type}}"
     }
 }

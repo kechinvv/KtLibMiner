@@ -8,4 +8,6 @@ object Configurations {
     var kAlg = 2
     var traversJumps = 1000
     var traceNode = TraceNode.NAME
+    var unionEnd = true
+    var toJson = true
 }

@@ -103,6 +103,7 @@ class SceneExtractor(var lib: String) {
                         if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
                             method = succ.invokeExpr.method
                         if (foundLib(succ.invokeExpr.method)) {
+                            saveMethod(succ.invokeExpr)
                             trace.add(succ.invokeExpr)
                             invAdded = true
                         }
@@ -135,7 +136,7 @@ class SceneExtractor(var lib: String) {
 
         val staticExtracted = staticExtracting(traceStatic.toMutableList())
         extractedTracesRet.addAll(staticExtracted)
-        val invokeExtracted = invokeExtracting(traceDef.toMutableList())
+        val invokeExtracted = defaultExtracting(traceDef.toMutableList())
         extractedTracesRet.addAll(invokeExtracted)
 
         return extractedTracesRet
@@ -158,7 +159,7 @@ class SceneExtractor(var lib: String) {
         return extractedTracesRet
     }
 
-    private fun invokeExtracting(traceDef: MutableList<InvokeExpr>): HashSet<MutableList<InvokeExpr>> {
+    private fun defaultExtracting(traceDef: MutableList<InvokeExpr>): HashSet<MutableList<InvokeExpr>> {
         val extractedTracesRet = HashSet<MutableList<InvokeExpr>>()
         traceDef.forEach { inv ->
             val obj1PT = getPointsToSet(inv)
@@ -183,7 +184,20 @@ class SceneExtractor(var lib: String) {
 
 
     private fun extractAndSave(trace: List<InvokeExpr>) {
-        trace.forEach { invoke ->
+            val extractedTraces = sequenceExtracting(trace).filter { it.size > 1 }
+            extractedTraces.forEach {
+                val indicator = it.first()
+                var klass = indicator.method.declaringClass.toString()
+                if (indicator.method.isStatic) klass += "__s"
+                val jsonData = GsonBuilder().disableHtmlEscaping().create().toJson(it.map { invoke ->
+                    if (Configurations.traceNode == TraceNode.NAME) invoke.method.name
+                    else invoke.method.signature.replace(' ', '+')
+                })
+                DatabaseController.addTrace(jsonData!!, klass)
+            }
+    }
+
+    private fun saveMethod(invoke: InvokeExpr) {
             val name = if (Configurations.traceNode == TraceNode.NAME) invoke.method.name
             else invoke.method.signature.replace(' ', '+')
             val klass =
@@ -192,21 +206,6 @@ class SceneExtractor(var lib: String) {
                 name,
                 klass
             )
-        }
-
-        val extractedTraces = sequenceExtracting(trace).filter { it.size > 1 }.toHashSet()
-        extractedTraces.forEach {
-            val indicator = it.first()
-            var klass = indicator.method.declaringClass.toString()
-            if (indicator.method.isStatic) klass += "__s"
-            val jsonData = GsonBuilder().disableHtmlEscaping().create().toJson(it.map { invoke ->
-                if (Configurations.traceNode == TraceNode.NAME) invoke.method.name
-                else invoke.method.signature.replace(' ', '+')
-            })
-            DatabaseController.addTrace(jsonData!!, klass)
-        }
-
     }
-
 
 }

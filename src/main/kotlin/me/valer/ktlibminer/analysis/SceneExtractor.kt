@@ -76,17 +76,18 @@ class SceneExtractor(var lib: String) {
         ttl: Int = Configurations.traversJumps,
         isMethod: Boolean = false,
         extracted: HashMap<String, MutableList<MutableList<InvokeExpr>>> = HashMap(),
-        continueStack: ArrayDeque<Pair<Unit, Boolean>> = ArrayDeque()
+        continueStack: ArrayDeque<Pair<Unit, Boolean>> = ArrayDeque(),
+        depth: Int = Configurations.traversDepth
     ) {
         val currentSuccessors = icfg.getSuccsOf(startPoint)
-        if (currentSuccessors.size == 0 || ttl <= 0) {
+        if (currentSuccessors.size == 0 || ttl <= 0 || depth == 0) {
             if (ttl <= 0 || !isMethod) {
                 counter++
                 if (counter % 50000 == 0) println("Traces already analyzed... = $counter")
                 save(extracted)
             } else {
                 val succInfo = continueStack.removeLast()
-                graphTraverseLib(succInfo.first, ttl - 1, succInfo.second, extracted, continueStack)
+                graphTraverseLib(succInfo.first, ttl - 1, succInfo.second, extracted, continueStack, depth + 1)
                 continueStack.add(succInfo)
             }
         } else {
@@ -108,14 +109,15 @@ class SceneExtractor(var lib: String) {
                             addedIndex = fillExtracted(succ.invokeExpr, extracted[klass]!!)
                         }
                     }
-                } catch (_: Exception) {}
+                } catch (_: Exception) {
+                }
                 if (method != null && method.declaringClass in Scene.v().applicationClasses) {
                     continueStack.add(Pair(succ, isMethod))
                     continueAdded = true
                     icfg.getStartPointsOf(method).forEach { methodStart ->
-                        graphTraverseLib(methodStart, ttl - 1, true, extracted, continueStack)
+                        graphTraverseLib(methodStart, ttl - 1, true, extracted, continueStack, depth - 1)
                     }
-                } else graphTraverseLib(succ, ttl - 1, isMethod, extracted, continueStack)
+                } else graphTraverseLib(succ, ttl - 1, isMethod, extracted, continueStack, depth)
 
                 if (addedIndex != null) confiscate(addedIndex, extracted[klass]!!)
                 if (continueAdded) continueStack.removeLast()
@@ -186,7 +188,8 @@ class SceneExtractor(var lib: String) {
     }
 
     private fun foundLib(method: SootMethod): Boolean {
-        return method.declaringClass.toString().startsWith("$lib.") || method.declaringClass.toString() == lib
+        return method.declaringClass.toString().startsWith("$lib.", true) ||
+                method.declaringClass.toString().lowercase() == lib.lowercase()
     }
 
 }

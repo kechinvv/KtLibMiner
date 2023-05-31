@@ -37,7 +37,7 @@ fun prependAnalysis(path: String) {
         DatabaseController.clearError()
         FSMInference(Configurations.workdir).inferenceAll()
     } catch (e: Exception) {
-        println(e.stackTrace)
+        println(e)
     } finally {
         DatabaseController.closeConnection()
     }
@@ -46,7 +46,6 @@ fun prependAnalysis(path: String) {
 fun defaultAnalysis() {
     DatabaseController.initDB()
     try {
-        Configurations.ghToken = System.getenv("token")
         // Configurations.gradleVersion = "7.5.1"
         val client = OkHttpClient()
         val repsPath = Path(Configurations.workdir, "reps")
@@ -56,13 +55,11 @@ fun defaultAnalysis() {
         val seq = ProjectsSequence(Configurations.libName, client)
 
         Files.createDirectories(repsPath)
-        seq.filter { !analyzedPrjStorage.contains(it.name) }.map {
+        seq.filter { !analyzedPrjStorage.contains(it.name) && (it.hasJar() || Configurations.allProj) }.map {
             analyzedPrjStorage.add(it.name)
             println(it.name)
 
-            if (!it.hasJar() && !Configurations.allProj) return@map
-
-            val localPrj = it.cloneTo(Path(repsPath.toString() + it.name.replace('/', '_')))
+            val localPrj = it.cloneTo(Path(repsPath.toString(), it.name.replace('/', '_')))
             if (localPrj.jar != null) {
                 extractor.runAnalyze(localPrj.jar)
             } else {
@@ -76,7 +73,7 @@ fun defaultAnalysis() {
         DatabaseController.clearError()
         FSMInference(Configurations.workdir).inferenceAll()
     } catch (e: Exception) {
-        println(e.stackTrace)
+        println(e)
     } finally {
         DatabaseController.closeConnection()
     }
@@ -88,9 +85,12 @@ fun parseCommandLine(args: Array<String>) {
     val helpOption = Option("h", "help", false, "help instructions")
     options.addOption(helpOption)
 
+    val tokenOption = Option("t", "token", true, "GitHub API token")
+    options.addOption(tokenOption)
+
     val inferOnlyOption = Option(
-        "t",
-        "trace-use",
+        "u",
+        "use-trace",
         false,
         "inference with already collected traces (you can pass it param if you passed name)"
     )
@@ -110,6 +110,10 @@ fun parseCommandLine(args: Array<String>) {
     val jumpsOption =
         Option("j", "jumps-traversal", true, "max len of trace for analysis (default 200)")
     options.addOption(jumpsOption)
+
+    val depthOption =
+        Option("d", "depth-traversal", true, "max depth of trace for analysis or -1 for any depth (default 10)")
+    options.addOption(depthOption)
 
     val disMergeOption =
         Option("dm", "disable-merge", false, "disable merging of end states")
@@ -152,7 +156,7 @@ fun parseCommandLine(args: Array<String>) {
         if (line.hasOption("k")) Configurations.kAlg = line.getOptionValue("k").toInt()
         if (line.hasOption("dm")) Configurations.unionEnd = false
 
-        if (!line.hasOption("n") || line.hasOption("t")) {
+        if (!line.hasOption("n") || line.hasOption("u")) {
             inferenceOnly()
             return
         }
@@ -167,11 +171,15 @@ fun parseCommandLine(args: Array<String>) {
 
         if (line.hasOption("s")) Configurations.traceNode = TraceNode.SIGNATURE
         if (line.hasOption("j")) Configurations.traversJumps = line.getOptionValue("j").toInt()
+        if (line.hasOption("d")) Configurations.traversDepth = line.getOptionValue("d").toInt()
 
         if (line.hasOption("p")) {
             prependAnalysis(line.getOptionValue("p"))
             return
         }
+
+        if (!line.hasOption("t")) throw ParseException("For projects search set token arg")
+            else Configurations.ghToken = line.getOptionValue("t")
 
         if (line.hasOption("a")) Configurations.allProj = true
         if (line.hasOption("g")) Configurations.goal = line.getOptionValue("g").toInt()

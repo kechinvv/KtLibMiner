@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 fun properties(key: String) = project.findProperty(key).toString()
 
 plugins {
@@ -7,10 +5,7 @@ plugins {
 }
 
 group = "me.valer"
-version = "1.0-SNAPSHOT"
-val kfgVersion = "0.3.5"
-val toolingApiVersion = "7.5.1"
-val walaVersion = "1.5.9"
+version = "1.0"
 
 repositories {
     mavenCentral()
@@ -25,7 +20,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.7.20")
     implementation("com.google.code.gson:gson:2.10.1")
 
-    implementation("org.gradle:gradle-tooling-api:$toolingApiVersion")
+    implementation("org.gradle:gradle-tooling-api:7.5.1")
     implementation("org.apache.maven.shared:maven-verifier:2.0.0-M1")
     implementation("org.soot-oss:soot:4.4.1")
 
@@ -53,3 +48,18 @@ tasks.test {
     useJUnitPlatform()
 }
 
+
+tasks.create("MyFatJar", Jar::class) {
+    group = "build"
+    description = "Creates a self-contained fat JAR of the application that can be run."
+    manifest.attributes["Main-Class"] = "me.valer.ktlibminer.MainKt"
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    val dependencies = configurations
+        .runtimeClasspath
+        .get()
+        .map(::zipTree)
+    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA", "META-INF/INDEX.LIST")
+    from(dependencies)
+    with(tasks.jar.get())
+    archiveBaseName.set("${project.name}-fat")
+}

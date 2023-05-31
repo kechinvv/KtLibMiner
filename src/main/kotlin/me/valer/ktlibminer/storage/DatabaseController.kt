@@ -107,7 +107,6 @@ object DatabaseController {
 
     fun clearError(): Boolean {
         val classes = getClasses()
-        println(classes)
         for (cls in classes) {
             val stmtD =
                 conn.prepareStatement("select (AVG(samples*samples) - AVG(samples)*AVG(samples)) as disp from sequences where class = ?")

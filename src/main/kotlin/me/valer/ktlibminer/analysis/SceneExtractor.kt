@@ -1,4 +1,4 @@
-package me.valer.ktlibminer
+package me.valer.ktlibminer.analysis
 
 import com.google.gson.GsonBuilder
 import heros.InterproceduralCFG
@@ -63,9 +63,8 @@ class SceneExtractor(var lib: String) {
                         startPoints.forEach { startPoint ->
                             graphTraverseLib(startPoint)
                         }
-                        println(counter)
+                        println("Total traces analyzed = $counter")
                     } else {
-                        println("App classes = " + Scene.v().applicationClasses.size)
                         println("Not a malware with main method")
                     }
                 }
@@ -83,10 +82,8 @@ class SceneExtractor(var lib: String) {
         if (currentSuccessors.size == 0 || ttl <= 0) {
             if (ttl <= 0 || !isMethod) {
                 counter++
-                if (counter % 50000 == 0) println(counter)
+                if (counter % 50000 == 0) println("Traces already analyzed... = $counter")
                 save(extracted)
-                //println("TTL = $ttl ; fullSize = ${trace.size}  ; counter = $counter")
-//                extractAndSave(trace)
             } else {
                 val succInfo = continueStack.removeLast()
                 graphTraverseLib(succInfo.first, ttl - 1, succInfo.second, extracted, continueStack)
@@ -97,7 +94,7 @@ class SceneExtractor(var lib: String) {
                 var method: SootMethod? = null
                 var continueAdded = false
                 var klass: String? = null
-                var addedIndexes: List<Int>? = null
+                var addedIndex: Int? = null
                 try {
                     if (succ is JInvokeStmt || succ is JAssignStmt) {
                         succ as AbstractStmt
@@ -108,11 +105,10 @@ class SceneExtractor(var lib: String) {
                             val decl = succ.invokeExpr.method.declaringClass
                             klass = if (decl.isStatic) "${decl}__s" else decl.toString()
                             if (extracted[klass] == null) extracted[klass] = mutableListOf()
-                            addedIndexes = fillExtracted(succ.invokeExpr, extracted[klass]!!)
+                            addedIndex = fillExtracted(succ.invokeExpr, extracted[klass]!!)
                         }
                     }
-                } catch (_: Exception) {
-                }
+                } catch (_: Exception) {}
                 if (method != null && method.declaringClass in Scene.v().applicationClasses) {
                     continueStack.add(Pair(succ, isMethod))
                     continueAdded = true
@@ -120,31 +116,27 @@ class SceneExtractor(var lib: String) {
                         graphTraverseLib(methodStart, ttl - 1, true, extracted, continueStack)
                     }
                 } else graphTraverseLib(succ, ttl - 1, isMethod, extracted, continueStack)
-                if (!addedIndexes.isNullOrEmpty()) {
-                    confiscate(addedIndexes, extracted[klass]!!)
-                }
+
+                if (addedIndex != null) confiscate(addedIndex, extracted[klass]!!)
                 if (continueAdded) continueStack.removeLast()
             }
         }
     }
 
 
-    private fun fillExtracted(invoke: InvokeExpr, extractedKlass: MutableList<MutableList<InvokeExpr>>): List<Int> {
+    private fun fillExtracted(invoke: InvokeExpr, extractedKlass: MutableList<MutableList<InvokeExpr>>): Int {
         return if (invoke.method.isStatic) {
             if (extractedKlass.size != 0) extractedKlass[0].add(invoke)
             else extractedKlass.add(mutableListOf(invoke))
-            listOf(0)
+            0
         } else {
             defaultExtracting(invoke, extractedKlass)
         }
     }
 
-    private fun confiscate(indexes: List<Int>, extractedKlass: MutableList<MutableList<InvokeExpr>>) {
-        indexes.forEach {
-            extractedKlass[it].removeLast()
-            if (extractedKlass[it].isEmpty()) extractedKlass.removeAt(it)
-        }
-
+    private fun confiscate(index: Int, extractedKlass: MutableList<MutableList<InvokeExpr>>) {
+        extractedKlass[index].removeLast()
+        if (extractedKlass[index].isEmpty()) extractedKlass.removeAt(index)
     }
 
     private fun save(extracted: HashMap<String, MutableList<MutableList<InvokeExpr>>>) {
@@ -161,24 +153,20 @@ class SceneExtractor(var lib: String) {
     }
 
 
-    private fun defaultExtracting(invoke: InvokeExpr, extractedKlass: MutableList<MutableList<InvokeExpr>>): List<Int> {
-        val indexes = mutableListOf<Int>()
+    private fun defaultExtracting(invoke: InvokeExpr, extractedKlass: MutableList<MutableList<InvokeExpr>>): Int {
         val obj1PT = getPointsToSet(invoke)
-        var inserted = false
+
         extractedKlass.forEachIndexed { index, it ->
             if (it.isEmpty()) return@forEachIndexed
             val obj2PT = getPointsToSet(it.last())
             if (obj1PT.hasNonEmptyIntersection(obj2PT)) {
-                indexes.add(index)
                 it.add(invoke)
-                inserted = true
+                return index
             }
         }
-        if (!inserted) {
-            extractedKlass.add(mutableListOf(invoke))
-            indexes.add(extractedKlass.lastIndex)
-        }
-        return indexes
+        extractedKlass.add(mutableListOf(invoke))
+        return extractedKlass.lastIndex
+
     }
 
     private fun saveMethod(invoke: InvokeExpr) {
@@ -201,6 +189,7 @@ class SceneExtractor(var lib: String) {
         return method.declaringClass.toString().startsWith("$lib.") || method.declaringClass.toString() == lib
     }
 
+}
 //    fun graphTraverseLib(
 //        startPoint: Unit,
 //        ttl: Int = Configurations.traversJumps,
@@ -323,5 +312,3 @@ class SceneExtractor(var lib: String) {
 //        return extractedTracesRet
 //    }
 
-
-}

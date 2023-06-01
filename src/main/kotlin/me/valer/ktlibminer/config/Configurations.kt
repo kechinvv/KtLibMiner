@@ -17,6 +17,7 @@ object Configurations {
 
     var traversJumps = 200
     var traversDepth = 10
+    var traceLimit = 10000000
     var traceNode = TraceNode.NAME
     var unionEnd = true
     var toJson = true

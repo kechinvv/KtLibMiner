@@ -120,6 +120,15 @@ fun parseCommandLine(args: Array<String>) {
         Option("d", "depth-traversal", true, "max depth of trace for analysis or -1 for any depth (default 10)")
     options.addOption(depthOption)
 
+    val traceCountOption =
+        Option(
+            "l",
+            "limit-trace",
+            true,
+            "max quantity of all traces for analysis or -1 for any quantity (default 10000000)"
+        )
+    options.addOption(traceCountOption)
+
     val disMergeOption =
         Option("dm", "disable-merge", false, "disable merging of end states")
     options.addOption(disMergeOption)
@@ -178,6 +187,7 @@ fun parseCommandLine(args: Array<String>) {
         if (line.hasOption("s")) Configurations.traceNode = TraceNode.SIGNATURE
         if (line.hasOption("j")) Configurations.traversJumps = line.getOptionValue("j").toInt()
         if (line.hasOption("d")) Configurations.traversDepth = line.getOptionValue("d").toInt()
+        if (line.hasOption("l")) Configurations.traceLimit = line.getOptionValue("l").toInt()
 
         if (line.hasOption("p")) {
             prependAnalysis(line.getOptionValue("p"))

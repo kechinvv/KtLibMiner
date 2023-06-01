@@ -40,11 +40,19 @@ dependencies {
     implementation("org.eclipse.jgit:org.eclipse.jgit:6.5.0.202303070854-r")
 
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
+
+    implementation("org.soot-oss:sootup.core:1.0.0")
+    implementation("org.soot-oss:sootup.java.core:1.0.0")
+    implementation("org.soot-oss:sootup.java.sourcecode:1.0.0")
+    implementation("org.soot-oss:sootup.java.bytecode:1.0.0")
+    implementation("org.soot-oss:sootup.jimple.parser:1.0.0")
+    implementation("org.soot-oss:sootup.callgraph:1.0.0")
+    implementation("org.soot-oss:sootup.analysis:1.0.0")
 }
 
 
 tasks.test {
-    jvmArgs = listOf("-Xss512m")
+    jvmArgs = listOf("-Xss512m", "-Xmx2g")
     useJUnitPlatform()
 }
 

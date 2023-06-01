@@ -50,7 +50,7 @@ class LocalRepository(val path: Path, val jar: String?) {
 
     private fun buildGradle(dir: Path): Boolean {
         val connector = GradleConnector.newConnector()
-        if (Configurations.gradlePath != null) connector.useInstallation(File(Configurations.gradlePath))
+        if (Configurations.gradlePath != null) connector.useInstallation(File(Configurations.gradlePath!!))
         else if (Configurations.gradleVersion != null) connector.useGradleVersion(Configurations.gradleVersion)
         connector.forProjectDirectory(File(dir.toString()))
         return try {

@@ -44,7 +44,7 @@ dependencies {
 
 
 tasks.test {
-    jvmArgs = listOf("-Xss512m")
+    jvmArgs = listOf("-Xss512m", "-Xmx2g")
     useJUnitPlatform()
 }
 

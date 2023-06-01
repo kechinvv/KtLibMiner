@@ -20,7 +20,8 @@ class SceneExtractor(var lib: String) {
 
     lateinit var icfg: InterproceduralCFG<Unit, SootMethod>
     lateinit var analysis: PAG
-    var counter = 0
+    private var counter = 0
+    private var stop = false
 
     fun runAnalyze(classpath: String): Boolean {
         try {
@@ -44,6 +45,8 @@ class SceneExtractor(var lib: String) {
     }
 
     fun init() {
+        stop = false
+        counter = 0
         G.reset()
         if (!PackManager.v().hasPack("wjtp.ifds")) PackManager.v().getPack("wjtp")
             .add(Transform("wjtp.ifds", object : SceneTransformer() {
@@ -58,6 +61,7 @@ class SceneExtractor(var lib: String) {
 
                         val startPoints = icfg.getStartPointsOf(mainMethod)
                         println("Entry Points are: ")
+                        println(mainClass)
                         println(startPoints)
 
                         startPoints.forEach { startPoint ->
@@ -84,6 +88,7 @@ class SceneExtractor(var lib: String) {
             if (ttl <= 0 || !isMethod) {
                 counter++
                 if (counter % 50000 == 0) println("Traces already analyzed... = $counter")
+                if (counter == Configurations.traceLimit) stop = true
                 save(extracted)
             } else {
                 val succInfo = continueStack.removeLast()
@@ -97,6 +102,7 @@ class SceneExtractor(var lib: String) {
                 var klass: String? = null
                 var addedIndex: Int? = null
                 try {
+                    if (stop) return
                     if (succ is JInvokeStmt || succ is JAssignStmt) {
                         succ as AbstractStmt
                         if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
@@ -314,4 +320,3 @@ class SceneExtractor(var lib: String) {
 //        }
 //        return extractedTracesRet
 //    }
-

@@ -20,4 +20,6 @@ object Configurations {
     var traceNode = TraceNode.NAME
     var unionEnd = true
     var toJson = true
+
+    var saveDb = false
 }

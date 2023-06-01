@@ -26,7 +26,8 @@ fun inferenceOnly() {
 
 @OptIn(ExperimentalPathApi::class)
 fun prependAnalysis(path: String) {
-    DatabaseController.initDB()
+    if (Configurations.saveDb) DatabaseController.openConnection()
+    else DatabaseController.initDB()
     try {
         val extractor = SceneExtractor(Configurations.libName)
 
@@ -44,7 +45,8 @@ fun prependAnalysis(path: String) {
 }
 
 fun defaultAnalysis() {
-    DatabaseController.initDB()
+    if (Configurations.saveDb) DatabaseController.openConnection()
+    else DatabaseController.initDB()
     try {
         // Configurations.gradleVersion = "7.5.1"
         val client = OkHttpClient()
@@ -87,6 +89,9 @@ fun parseCommandLine(args: Array<String>) {
 
     val tokenOption = Option("t", "token", true, "GitHub API token")
     options.addOption(tokenOption)
+
+    val saveDbOption = Option("h", "hold-db", false, "Allows you not to reset the accumulated data")
+    options.addOption(saveDbOption)
 
     val inferOnlyOption = Option(
         "u",
@@ -164,6 +169,7 @@ fun parseCommandLine(args: Array<String>) {
         if (!line.hasOption("n")) throw ParseException("For run analysis set name arg")
         else Configurations.libName = line.getOptionValue("n")
 
+        if (line.hasOption("h")) Configurations.saveDb = true
 
         if (line.hasOption("gv")) Configurations.gradleVersion = line.getOptionValue("gv")
         if (line.hasOption("gp")) Configurations.gradlePath = line.getOptionValue("gp")
@@ -179,7 +185,7 @@ fun parseCommandLine(args: Array<String>) {
         }
 
         if (!line.hasOption("t")) throw ParseException("For projects search set token arg")
-            else Configurations.ghToken = line.getOptionValue("t")
+        else Configurations.ghToken = line.getOptionValue("t")
 
         if (line.hasOption("a")) Configurations.allProj = true
         if (line.hasOption("g")) Configurations.goal = line.getOptionValue("g").toInt()

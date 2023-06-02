@@ -23,6 +23,9 @@ class SceneExtractor(var lib: String) {
     private var counter = 0
     private var stop = false
 
+    //private val transform = Transform("wjtp.ifds", null)
+
+
     fun runAnalyze(classpath: String): Boolean {
         try {
             init()
@@ -33,12 +36,12 @@ class SceneExtractor(var lib: String) {
             Options.v().set_process_dir(listOf(classpath))
             Options.v().set_output_format(Options.output_format_jimple)
             Options.v().setPhaseOption("cg.spark", "enabled:true")
-            Options.v().setPhaseOption("cg.spark", "verbose:true")
-            Scene.v().loadBasicClasses()
             Scene.v().loadNecessaryClasses()
-            PackManager.v().runPacks().runCatching { }
+            if (Scene.v().hasMainClass())
+                PackManager.v().runPacks()
+            else println("Main method not found")
             return true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             e.printStackTrace()
             return false
         }
@@ -51,26 +54,22 @@ class SceneExtractor(var lib: String) {
         if (!PackManager.v().hasPack("wjtp.ifds")) PackManager.v().getPack("wjtp")
             .add(Transform("wjtp.ifds", object : SceneTransformer() {
                 override fun internalTransform(phaseName: String?, options: MutableMap<String, String>?) {
-                    if (Scene.v().hasMainClass()) {
-                        val mainClass = Scene.v().mainClass
-                        val mainMethod = mainClass.getMethodByName("main")
+                    val mainClass = Scene.v().mainClass
+                    val mainMethod = mainClass.getMethodByName("main")
 
-                        Scene.v().entryPoints = arrayListOf(mainMethod)
-                        icfg = JimpleBasedInterproceduralCFG()
-                        analysis = Scene.v().pointsToAnalysis as PAG
+                    Scene.v().entryPoints = arrayListOf(mainMethod)
+                    icfg = JimpleBasedInterproceduralCFG()
+                    analysis = Scene.v().pointsToAnalysis as PAG
 
-                        val startPoints = icfg.getStartPointsOf(mainMethod)
-                        println("Entry Points are: ")
-                        println(mainClass)
-                        println(startPoints)
+                    val startPoints = icfg.getStartPointsOf(mainMethod)
+                    println("Entry Points are: ")
+                    println(mainClass)
+                    println(startPoints)
 
-                        startPoints.forEach { startPoint ->
-                            graphTraverseLib(startPoint)
-                        }
-                        println("Total traces analyzed = $counter")
-                    } else {
-                        println("Not a malware with main method")
+                    startPoints.forEach { startPoint ->
+                        graphTraverseLib(startPoint)
                     }
+                    println("Total traces analyzed = $counter")
                 }
             }))
     }
@@ -108,9 +107,11 @@ class SceneExtractor(var lib: String) {
                         if (succ.invokeExpr.method.declaringClass in Scene.v().applicationClasses)
                             method = succ.invokeExpr.method
                         if (foundLib(succ.invokeExpr.method)) {
-                            saveMethod(succ.invokeExpr)
-                            val decl = succ.invokeExpr.method.declaringClass
-                            klass = if (decl.isStatic) "${decl}__s" else decl.toString()
+                            saveMethod(succ.invokeExpr.method)
+                            val methodLib = succ.invokeExpr.method
+                            klass = if (methodLib.isStatic) "${methodLib.declaringClass}__s"
+                            else methodLib.declaringClass.toString()
+
                             if (extracted[klass] == null) extracted[klass] = mutableListOf()
                             addedIndex = fillExtracted(succ.invokeExpr, extracted[klass]!!)
                         }
@@ -165,7 +166,6 @@ class SceneExtractor(var lib: String) {
         val obj1PT = getPointsToSet(invoke)
 
         extractedKlass.forEachIndexed { index, it ->
-            if (it.isEmpty()) return@forEachIndexed
             val obj2PT = getPointsToSet(it.last())
             if (obj1PT.hasNonEmptyIntersection(obj2PT)) {
                 it.add(invoke)
@@ -174,14 +174,13 @@ class SceneExtractor(var lib: String) {
         }
         extractedKlass.add(mutableListOf(invoke))
         return extractedKlass.lastIndex
-
     }
 
-    private fun saveMethod(invoke: InvokeExpr) {
-        val name = if (Configurations.traceNode == TraceNode.NAME) invoke.method.name
-        else invoke.method.signature.replace(' ', '+')
+    private fun saveMethod(method: SootMethod) {
+        val name = if (Configurations.traceNode == TraceNode.NAME) method.name
+        else method.signature.replace(' ', '+')
         val klass =
-            if (invoke.method.isStatic) "${invoke.method.declaringClass}__s" else invoke.method.declaringClass.toString()
+            if (method.isStatic) "${method.declaringClass}__s" else method.declaringClass.toString()
         DatabaseController.addMethod(
             name,
             klass

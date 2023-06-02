@@ -9,6 +9,7 @@ import me.valer.ktlibminer.storage.DatabaseController
 import okhttp3.OkHttpClient
 import org.apache.commons.cli.*
 import java.nio.file.Files
+import kotlin.concurrent.thread
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.Path
 import kotlin.io.path.name
@@ -34,7 +35,10 @@ fun prependAnalysis(path: String) {
         val jars = Path(path).walk().filter {
             it.name.endsWith(".jar")
         }.distinctBy { it.name }.filterNot { it.name == "gradle-wrapper.jar" }
-        jars.forEach { extractor.runAnalyze(it.toString()) }
+        jars.forEach { jar ->
+            val t = thread { extractor.runAnalyze(jar.toString()) }
+            t.join()
+        }
         DatabaseController.clearError()
         FSMInference(Configurations.workdir).inferenceAll()
     } catch (e: Exception) {
@@ -63,11 +67,13 @@ fun defaultAnalysis() {
 
             val localPrj = it.cloneTo(Path(repsPath.toString(), it.name.replace('/', '_')))
             if (localPrj.jar != null) {
-                extractor.runAnalyze(localPrj.jar)
+                val t = thread { extractor.runAnalyze(localPrj.jar) }
+                t.join()
             } else {
                 val jars = localPrj.build()
                 jars.forEach { jar ->
-                    extractor.runAnalyze(jar.toString())
+                    val t = thread { extractor.runAnalyze(jar.toString()) }
+                    t.join()
                 }
             }
             //localPrj.delete()

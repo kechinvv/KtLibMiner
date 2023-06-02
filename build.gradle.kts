@@ -22,7 +22,7 @@ dependencies {
 
     implementation("org.gradle:gradle-tooling-api:7.5.1")
     implementation("org.apache.maven.shared:maven-verifier:2.0.0-M1")
-    implementation("org.soot-oss:soot:4.4.1")
+    implementation("org.soot-oss:soot:4.5.0-SNAPSHOT")
 
     implementation("org.xerial:sqlite-jdbc:3.41.2.1")
 

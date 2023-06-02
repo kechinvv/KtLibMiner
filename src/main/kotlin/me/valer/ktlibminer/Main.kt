@@ -145,7 +145,7 @@ fun parseCommandLine(args: Array<String>) {
     val goalOption = Option("g", "goal", true, "the number of projects to be found (default 100)")
     options.addOption(goalOption)
 
-    val outputOption = Option("w", "workdir", true, "dir for output inference result and for cloning projects")
+    val outputOption = Option("w", "workdir", true, "dir for output inference result and for cloning projects. required option!")
     options.addOption(outputOption)
 
     val inputOption = Option("p", "prepared", true, "dir with prepared projects for analysis")

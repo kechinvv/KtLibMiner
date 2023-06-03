@@ -22,9 +22,6 @@ class SceneExtractor(var lib: String) {
     private var counter = 0
     private var stop = false
 
-    //private val transform = Transform("wjtp.ifds", null)
-
-
     fun runAnalyze(classpath: String): Boolean {
         try {
             init()

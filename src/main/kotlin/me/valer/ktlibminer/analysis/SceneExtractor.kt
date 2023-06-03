@@ -1,7 +1,6 @@
 package me.valer.ktlibminer.analysis
 
 import com.google.gson.GsonBuilder
-import heros.InterproceduralCFG
 import me.valer.ktlibminer.config.Configurations
 import me.valer.ktlibminer.config.TraceNode
 import me.valer.ktlibminer.storage.DatabaseController
@@ -18,7 +17,7 @@ import soot.options.Options
 
 class SceneExtractor(var lib: String) {
 
-    lateinit var icfg: InterproceduralCFG<Unit, SootMethod>
+    lateinit var icfg: JimpleBasedInterproceduralCFG
     lateinit var analysis: PAG
     private var counter = 0
     private var stop = false
@@ -48,28 +47,34 @@ class SceneExtractor(var lib: String) {
     }
 
     fun init() {
-        stop = false
-        counter = 0
         G.reset()
         if (!PackManager.v().hasPack("wjtp.ifds")) PackManager.v().getPack("wjtp")
             .add(Transform("wjtp.ifds", object : SceneTransformer() {
                 override fun internalTransform(phaseName: String?, options: MutableMap<String, String>?) {
-                    val mainClass = Scene.v().mainClass
-                    val mainMethod = mainClass.getMethodByName("main")
-
-                    Scene.v().entryPoints = arrayListOf(mainMethod)
+                    val mainMethods = mutableListOf<SootMethod>()
+                    Scene.v().classes.forEach { klass ->
+                        klass.methods.forEach { if (it.isMain) mainMethods.add(it) }
+                    }
+                    println("Enty points size: ${mainMethods.size}")
+                    Scene.v().entryPoints = mainMethods
                     icfg = JimpleBasedInterproceduralCFG()
+                    icfg.setIncludePhantomCallees(true)
                     analysis = Scene.v().pointsToAnalysis as PAG
 
-                    val startPoints = icfg.getStartPointsOf(mainMethod)
-                    println("Entry Points are: ")
-                    println(mainClass)
-                    println(startPoints)
+                    mainMethods.forEach { mainMethod ->
+                        val startPoints = icfg.getStartPointsOf(mainMethod)
+                        println("Entry Points are: ")
+                        println(mainMethod.signature)
+                        println(startPoints)
 
-                    startPoints.forEach { startPoint ->
-                        graphTraverseLib(startPoint)
+                        stop = false
+                        counter = 0
+
+                        startPoints.forEach { startPoint ->
+                            graphTraverseLib(startPoint)
+                        }
+                        println("Total traces analyzed = $counter")
                     }
-                    println("Total traces analyzed = $counter")
                 }
             }))
     }

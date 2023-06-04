@@ -1,0 +1,59 @@
+{
+  "name": "java.util.zip.ZipOutputStream",
+  "shifts": [
+    {
+      "from": "1",
+      "to": "3",
+      "with": [
+        "close"
+      ]
+    },
+    {
+      "from": "1",
+      "to": "2",
+      "with": [
+        "putNextEntry"
+      ]
+    },
+    {
+      "from": "2",
+      "to": "2",
+      "with": [
+        "write"
+      ]
+    },
+    {
+      "from": "2",
+      "to": "1",
+      "with": [
+        "closeEntry"
+      ]
+    },
+    {
+      "from": "0",
+      "to": "1",
+      "with": [
+        "<init>"
+      ]
+    }
+  ],
+  "class": "java.util.zip.ZipOutputStream",
+  "states": [
+    {
+      "name": "1",
+      "type": "DEF"
+    },
+    {
+      "name": "0",
+      "type": "INIT"
+    },
+    {
+      "name": "3",
+      "type": "FIN"
+    },
+    {
+      "name": "2",
+      "type": "DEF"
+    }
+  ]
+}

@@ -49,7 +49,7 @@ class SceneExtractor(var lib: String) {
             .add(Transform("wjtp.ifds", object : SceneTransformer() {
                 override fun internalTransform(phaseName: String?, options: MutableMap<String, String>?) {
                     val mainMethods = mutableListOf<SootMethod>()
-                    Scene.v().classes.forEach { klass ->
+                    Scene.v().applicationClasses.forEach { klass ->
                         klass.methods.forEach { if (it.isMain) mainMethods.add(it) }
                     }
                     println("Enty points size: ${mainMethods.size}")

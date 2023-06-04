@@ -1,5 +1,5 @@
 # KtLibMiner
-Static analysis of library usage
+Static analysis of library usage for java
 ## Options
 - `-a,--all-projects` - download all found projects (only with jar assets by default))
 - `-d,--depth-traversal <arg>` - max depth of trace for analysis or -1 for any depth (default 10)

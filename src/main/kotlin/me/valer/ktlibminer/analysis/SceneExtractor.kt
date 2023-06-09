@@ -153,7 +153,7 @@ class SceneExtractor(var lib: String) {
     private fun save(extracted: HashMap<String, MutableList<MutableList<InvokeExpr>>>) {
         extracted.forEach { (key, value) ->
             value.forEach inner@{
-                if (it.size < 2) return@inner
+                if (it.size == 0) return@inner
                 val jsonData = GsonBuilder().disableHtmlEscaping().create().toJson(it.map { invoke ->
                     if (Configurations.traceNode == TraceNode.NAME) invoke.method.name
                     else invoke.method.signature.replace(' ', '+')

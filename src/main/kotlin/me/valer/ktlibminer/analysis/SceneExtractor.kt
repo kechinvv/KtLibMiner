@@ -152,13 +152,22 @@ class SceneExtractor(var lib: String) {
 
     private fun save(extracted: HashMap<String, MutableList<MutableList<InvokeExpr>>>) {
         extracted.forEach { (key, value) ->
-            value.forEach inner@{
-                if (it.size == 0) return@inner
-                val jsonData = GsonBuilder().disableHtmlEscaping().create().toJson(it.map { invoke ->
-                    if (Configurations.traceNode == TraceNode.NAME) invoke.method.name
-                    else invoke.method.signature.replace(' ', '+')
-                })
-                DatabaseController.addTrace(jsonData!!, key)
+            value.forEach inner@{ trace ->
+                if (trace.size == 0) return@inner
+                var tempTrace = mutableListOf<InvokeExpr>()
+                trace.forEach { invokeGlob ->
+                    if (invokeGlob.method.name == "<init>" || invokeGlob == trace.last()) {
+                        if (invokeGlob.method.name != "<init>") tempTrace.add(invokeGlob)
+                        if (tempTrace.isNotEmpty()) {
+                            val jsonData = GsonBuilder().disableHtmlEscaping().create().toJson(tempTrace.map { invoke ->
+                                if (Configurations.traceNode == TraceNode.NAME) invoke.method.name
+                                else invoke.method.signature.replace(' ', '+')
+                            })
+                            DatabaseController.addTrace(jsonData!!, key)
+                        }
+                        tempTrace = mutableListOf(invokeGlob)
+                    } else tempTrace.add(invokeGlob)
+                }
             }
         }
     }

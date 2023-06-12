@@ -54,24 +54,27 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
                 shifts.filter { shift -> it.type == StateType.FIN && shift.from == it.name && shift.to != it.name }
             if (transition.isNotEmpty()) it.type = StateType.DEF
         }
-        val finStates = states.filter { it.type == StateType.FIN }.toHashSet()
-        val finState = finStates.first()
+        val finStates = states.filter { it.type == StateType.FIN }.toMutableList()
+        val finState = finStates.removeLastOrNull()
 
         finStates.forEach { state ->
             shifts.forEach { shift ->
-                if (shift.to == state.name) shift.to = finState.name
-                if (shift.from == state.name) shift.from = finState.name
+                if (shift.to == state.name) shift.to = finState!!.name
+                if (shift.from == state.name) shift.from = finState!!.name
             }
         }
-        unionWith(finState.name)
+        if (finState != null) {
+            unionWith(finState.name)
+        }
         shifts = shifts.distinct().toHashSet()
+        states.removeAll(finStates.toSet())
         unhandled = false
     }
 
     fun unionWith(finName: String) {
         val cycleShifts = shifts.filter { it.to == it.from && it.to == finName }
         val unionWith = hashSetOf<String>()
-        cycleShifts.forEach { _ -> unionWith.addAll(unionWith) }
+        cycleShifts.forEach { unionWith.addAll(it.with) }
         cycleShifts.forEach { it.with = unionWith }
     }
 

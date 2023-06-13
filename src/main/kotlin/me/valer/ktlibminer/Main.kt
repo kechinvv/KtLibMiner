@@ -1,91 +1,16 @@
 package me.valer.ktlibminer
 
-import me.valer.ktlibminer.analysis.SceneExtractor
 import me.valer.ktlibminer.config.Configurations
 import me.valer.ktlibminer.config.TraceNode
-import me.valer.ktlibminer.inference.FSMInference
-import me.valer.ktlibminer.repository.ProjectsSequence
-import me.valer.ktlibminer.storage.DatabaseController
-import okhttp3.OkHttpClient
+import me.valer.ktlibminer.scenario.DefaultScenario
+import me.valer.ktlibminer.scenario.InferenceOnlyScenario
+import me.valer.ktlibminer.scenario.PrependScenario
 import org.apache.commons.cli.*
-import java.nio.file.Files
-import kotlin.concurrent.thread
-import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.Path
-import kotlin.io.path.name
-import kotlin.io.path.walk
 
 fun main(args: Array<String>) {
     parseCommandLine(args)
 }
 
-fun inferenceOnly() {
-    DatabaseController.openConnection()
-    FSMInference(Configurations.workdir).inferenceAll()
-    DatabaseController.closeConnection()
-}
-
-@OptIn(ExperimentalPathApi::class)
-fun prependAnalysis(path: String) {
-    if (Configurations.saveDb) DatabaseController.openConnection()
-    else DatabaseController.initDB()
-    try {
-        val extractor = SceneExtractor(Configurations.libName)
-
-        val jars = Path(path).walk().filter {
-            it.name.endsWith(".jar")
-        }.distinctBy { it.name }.filterNot { it.name == "gradle-wrapper.jar" }
-        jars.forEach { jar ->
-            val t = thread { extractor.runAnalyze(jar.toString()) }
-            t.join()
-        }
-        DatabaseController.clearError()
-        FSMInference(Configurations.workdir).inferenceAll()
-    } catch (e: Exception) {
-        println(e)
-    } finally {
-        DatabaseController.closeConnection()
-    }
-}
-
-fun defaultAnalysis() {
-    if (Configurations.saveDb) DatabaseController.openConnection()
-    else DatabaseController.initDB()
-    try {
-        // Configurations.gradleVersion = "7.5.1"
-        val client = OkHttpClient()
-        val repsPath = Path(Configurations.workdir, "reps")
-
-        val analyzedPrjStorage = HashSet<String>()
-        val extractor = SceneExtractor(Configurations.libName)
-        val seq = ProjectsSequence(Configurations.libName, client)
-
-        Files.createDirectories(repsPath)
-        seq.filter { !analyzedPrjStorage.contains(it.name) && (it.hasJar() || Configurations.allProj) }.map {
-            analyzedPrjStorage.add(it.name)
-            println(it.name)
-
-            val localPrj = it.cloneTo(Path(repsPath.toString(), it.name.replace('/', '_')))
-            if (localPrj.jar != null) {
-                val t = thread { extractor.runAnalyze(localPrj.jar) }
-                t.join()
-            } else {
-                val jars = localPrj.build()
-                jars.forEach { jar ->
-                    val t = thread { extractor.runAnalyze(jar.toString()) }
-                    t.join()
-                }
-            }
-            //localPrj.delete()
-        }.take(Configurations.goal).last()
-        DatabaseController.clearError()
-        FSMInference(Configurations.workdir).inferenceAll()
-    } catch (e: Exception) {
-        println(e)
-    } finally {
-        DatabaseController.closeConnection()
-    }
-}
 
 fun parseCommandLine(args: Array<String>) {
     val options = Options()
@@ -145,7 +70,8 @@ fun parseCommandLine(args: Array<String>) {
     val goalOption = Option("g", "goal", true, "the number of projects to be found (default 100)")
     options.addOption(goalOption)
 
-    val outputOption = Option("w", "workdir", true, "dir for output inference result and for cloning projects. required option!")
+    val outputOption =
+        Option("w", "workdir", true, "dir for output inference result and for cloning projects. required option!")
     options.addOption(outputOption)
 
     val inputOption = Option("p", "prepared", true, "dir with prepared projects for analysis")
@@ -177,7 +103,7 @@ fun parseCommandLine(args: Array<String>) {
         if (line.hasOption("dm")) Configurations.unionEnd = false
 
         if (!line.hasOption("n") || line.hasOption("u")) {
-            inferenceOnly()
+            InferenceOnlyScenario().run()
             return
         }
 
@@ -196,7 +122,7 @@ fun parseCommandLine(args: Array<String>) {
         if (line.hasOption("l")) Configurations.traceLimit = line.getOptionValue("l").toInt()
 
         if (line.hasOption("p")) {
-            prependAnalysis(line.getOptionValue("p"))
+            PrependScenario(line.getOptionValue("p")).run()
             return
         }
 
@@ -205,7 +131,7 @@ fun parseCommandLine(args: Array<String>) {
 
         if (line.hasOption("a")) Configurations.allProj = true
         if (line.hasOption("g")) Configurations.goal = line.getOptionValue("g").toInt()
-        defaultAnalysis()
+        DefaultScenario().run()
     } catch (e: ParseException) {
         System.err.println("Parsing failed.  Reason: " + e.message);
         formatter = HelpFormatter()

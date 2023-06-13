@@ -96,7 +96,9 @@ class LocalRepository(val path: Path, val jar: String?) {
         return dir.walk().filter {
             it.name.endsWith(".jar") &&
                     (it.absolutePathString().contains(BuilderType.GRADLE.path.joinToString("/")) ||
-                            it.absolutePathString().contains(BuilderType.MAVEN.path.joinToString("/")))
+                            it.absolutePathString().contains(BuilderType.GRADLE.path.joinToString("\\")) ||
+                            it.absolutePathString().contains(BuilderType.MAVEN.path.joinToString("/")) ||
+                            it.absolutePathString().contains(BuilderType.MAVEN.path.joinToString("\\")))
         }.toList().distinctBy { it.name }.filterNot { it.name == "gradle-wrapper.jar" }
     }
 

@@ -49,7 +49,7 @@ class LocalRepTest {
         @JvmStatic
         @BeforeAll
         fun setupConf(): Unit {
-            Configurations.ghToken = "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"
+            Configurations.ghToken = System.getenv("token")
         }
     }
 }

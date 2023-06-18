@@ -1,3 +1,5 @@
+package sys
+
 import me.valer.ktlibminer.analysis.SceneExtractor
 import me.valer.ktlibminer.inference.FSMInference
 import me.valer.ktlibminer.storage.DatabaseController

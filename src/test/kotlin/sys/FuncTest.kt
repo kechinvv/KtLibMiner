@@ -1,3 +1,5 @@
+package sys
+
 import me.valer.ktlibminer.analysis.SceneExtractor
 import me.valer.ktlibminer.config.Configurations
 import me.valer.ktlibminer.repository.LocalRepository

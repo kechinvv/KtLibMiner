@@ -101,7 +101,7 @@ class SceneExtractor(var lib: String) {
                 var method: SootMethod? = null
                 var continueAdded = false
                 var klass: String? = null
-                var addedIndex: Int? = null
+                var addedIndex: List<Int>? = null
                 try {
                     if (stop) return
                     if (succ is JInvokeStmt || succ is JAssignStmt) {
@@ -135,19 +135,21 @@ class SceneExtractor(var lib: String) {
     }
 
 
-    private fun fillExtracted(invoke: InvokeExpr, extractedKlass: MutableList<MutableList<InvokeExpr>>): Int {
+    private fun fillExtracted(invoke: InvokeExpr, extractedKlass: MutableList<MutableList<InvokeExpr>>): List<Int> {
         return if (invoke.method.isStatic) {
             if (extractedKlass.size != 0) extractedKlass[0].add(invoke)
             else extractedKlass.add(mutableListOf(invoke))
-            0
+            listOf(0)
         } else {
             defaultExtracting(invoke, extractedKlass)
         }
     }
 
-    private fun confiscate(index: Int, extractedKlass: MutableList<MutableList<InvokeExpr>>) {
-        extractedKlass[index].removeLast()
-        if (extractedKlass[index].isEmpty()) extractedKlass.removeAt(index)
+    private fun confiscate(indexes: List<Int>, extractedKlass: MutableList<MutableList<InvokeExpr>>) {
+        indexes.forEach { index ->
+            extractedKlass[index].removeLast()
+            if (extractedKlass[index].isEmpty()) extractedKlass.removeAt(index)
+        }
     }
 
     private fun save(extracted: HashMap<String, MutableList<MutableList<InvokeExpr>>>) {
@@ -173,18 +175,22 @@ class SceneExtractor(var lib: String) {
     }
 
 
-    private fun defaultExtracting(invoke: InvokeExpr, extractedKlass: MutableList<MutableList<InvokeExpr>>): Int {
+    private fun defaultExtracting(invoke: InvokeExpr, extractedKlass: MutableList<MutableList<InvokeExpr>>): List<Int> {
         val obj1PT = getPointsToSet(invoke)
-
+        val indexes = mutableListOf<Int>()
+        var added = false
         extractedKlass.forEachIndexed { index, it ->
             val obj2PT = getPointsToSet(it.last())
             if (obj1PT.hasNonEmptyIntersection(obj2PT)) {
                 it.add(invoke)
-                return index
+                indexes.add(index)
+                added = true
             }
         }
-        extractedKlass.add(mutableListOf(invoke))
-        return extractedKlass.lastIndex
+        return if (!added) {
+            extractedKlass.add(mutableListOf(invoke))
+            listOf(extractedKlass.lastIndex)
+        } else indexes
     }
 
     private fun saveMethod(method: SootMethod) {

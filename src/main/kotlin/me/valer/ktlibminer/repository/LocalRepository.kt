@@ -13,18 +13,18 @@ import kotlin.io.path.*
 class LocalRepository(val path: Path, val jar: String?) {
 
     fun build(): List<Path> {
-        var jarPaths = findJar(path).toList()
+        var jarPaths = findJar().toList()
         if (jarPaths.isEmpty()) {
             var successBuild = buildDir(path)
             if (!successBuild) successBuild = scanAndBuild(path)
-            if (successBuild) jarPaths = findJar(path).toList()
+            if (successBuild) jarPaths = findJar().toList()
         }
         return jarPaths
     }
 
     @Throws(IOException::class)
-    fun delete() {
-        File(path.toString()).deleteRecursively()
+    fun delete(): Boolean {
+        return File(path.toString()).deleteRecursively()
     }
 
     private fun buildDir(dir: Path): Boolean {
@@ -92,7 +92,7 @@ class LocalRepository(val path: Path, val jar: String?) {
 
 
     @OptIn(ExperimentalPathApi::class)
-    fun findJar(dir: Path): List<Path> {
+    fun findJar(dir: Path = path): List<Path> {
         return dir.walk().filter {
             it.name.endsWith(".jar") &&
                     (it.absolutePathString().contains(BuilderType.GRADLE.path.joinToString("/")) ||

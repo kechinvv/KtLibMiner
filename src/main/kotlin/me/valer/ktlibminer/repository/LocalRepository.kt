@@ -16,7 +16,7 @@ class LocalRepository(val path: Path, val jar: String?) {
         var jarPaths = findJar().toList()
         if (jarPaths.isEmpty()) {
             var successBuild = buildDir(path)
-            if (!successBuild) successBuild = scanAndBuild(path)
+            if (!successBuild) successBuild = buildSubDirs(path)
             if (successBuild) jarPaths = findJar().toList()
         }
         return jarPaths
@@ -30,16 +30,11 @@ class LocalRepository(val path: Path, val jar: String?) {
     private fun buildDir(dir: Path): Boolean {
         return if (Files.exists(Paths.get("$dir/pom.xml"))) buildMaven(dir)
         else if (Files.exists(Paths.get("$dir/build.gradle"))) buildGradle(dir)
-//        else if (Files.exists(Paths.get("$dir/build.gradle.kts")) || Files.exists(Paths.get("$dir/build.gradle"))) buildGradle(
-//            dir
-//        )
         else false
     }
 
-    /*
-    * Find pom or gradle file on 1 level below the root
-    * */
-    private fun scanAndBuild(path: Path): Boolean {
+
+    private fun buildSubDirs(path: Path): Boolean {
         var res = false
         Files.walk(path).filter { Files.isDirectory(it) }.forEach {
             val built = buildDir(it)

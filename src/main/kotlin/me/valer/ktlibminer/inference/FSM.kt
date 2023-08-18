@@ -9,6 +9,10 @@ import guru.nidi.graphviz.model.Factory.mutGraph
 import guru.nidi.graphviz.model.Factory.mutNode
 import guru.nidi.graphviz.model.Link
 import guru.nidi.graphviz.model.MutableNode
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.JsonConfiguration
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -21,6 +25,7 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
     val states = HashSet<State>()
     var shifts = HashSet<Shift>()
     private var unhandled = true
+    val json = Json { prettyPrint = true }
 
 
     init {
@@ -79,13 +84,10 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
     }
 
     fun toJson(filePath: Path) {
-        val map = HashMap<String, Any>()
-        if (info.endsWith("__s")) map["class"] = info.dropLast(3)
-        else map["class"] = info
-        map["name"] = info
-        map["shifts"] = shifts
-        map["states"] = states
-        val strJson = GsonBuilder().disableHtmlEscaping().setPrettyPrinting().create().toJson(map)
+        val `class` = if (info.endsWith("__s")) info.dropLast(3)
+        else info
+        val automaton = Automaton(info, `class`, shifts, states)
+        val strJson = json.encodeToString(automaton)
         Files.deleteIfExists(filePath)
         Files.write(
             filePath,
@@ -111,14 +113,18 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
         Graphviz.fromGraph(g).render(Format.DOT).toFile(filePath.toFile())
     }
 
-
+    @Serializable
     data class Shift(var from: String, var to: String, var with: HashSet<String>) {
         override fun toString(): String = "{from: ${from}, to: ${to}, with: ${with}}"
 
         fun withToLabel(): String = with.joinToString("\\n ")
     }
 
+    @Serializable
     data class State(val name: String, var type: StateType) {
         override fun toString(): String = "{name: ${name}, type: ${type}}"
     }
+
+    @Serializable
+    data class Automaton(val name: String, val `class`: String, val shifts: Set<Shift>, val states: Set<State>)
 }

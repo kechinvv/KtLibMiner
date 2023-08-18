@@ -2,6 +2,7 @@ fun properties(key: String) = project.findProperty(key).toString()
 
 plugins {
     kotlin("jvm") version "1.7.20"
+    kotlin("plugin.serialization") version "1.8.20"
 }
 
 group = "me.valer"
@@ -18,7 +19,9 @@ repositories {
 
 dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.7.20")
+
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1") //need migration!
 
     implementation("org.gradle:gradle-tooling-api:7.5.1")
     implementation("org.apache.maven.shared:maven-verifier:2.0.0-M1")
@@ -27,6 +30,7 @@ dependencies {
     implementation("org.xerial:sqlite-jdbc:3.41.2.1")
 
     testImplementation(kotlin("test"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
 
     runtimeOnly("org.slf4j:slf4j-simple:2.0.5")
 

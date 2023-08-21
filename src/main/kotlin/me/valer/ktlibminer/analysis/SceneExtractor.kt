@@ -13,6 +13,7 @@ import soot.jimple.internal.JInvokeStmt
 import soot.jimple.spark.pag.PAG
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG
 import soot.options.Options
+import java.io.File
 
 
 class SceneExtractor(var lib: String) {
@@ -28,14 +29,19 @@ class SceneExtractor(var lib: String) {
             Options.v().set_prepend_classpath(true)
             Options.v().set_whole_program(true)
             Options.v().set_allow_phantom_refs(true)
-            Options.v().set_src_prec(2)
+            Options.v().set_src_prec(Options.src_prec_only_class)
             Options.v().set_process_dir(listOf(classpath))
             Options.v().set_output_format(Options.output_format_jimple)
             Options.v().setPhaseOption("cg.spark", "enabled:true")
+
+            Options.v()
+                .set_soot_classpath("C:\\Users\\valer\\.jdks\\jbr-17.0.8\\lib\\jrt-fs.jar" + File.pathSeparator + classpath)
+
             Scene.v().loadNecessaryClasses()
-            if (Scene.v().hasMainClass())
-                PackManager.v().runPacks()
-            else println("Main method not found")
+
+            println(Scene.v().applicationClasses.map { it.name })
+            PackManager.v().runPacks()
+
             return true
         } catch (e: Throwable) {
             e.printStackTrace()
@@ -50,12 +56,14 @@ class SceneExtractor(var lib: String) {
                 override fun internalTransform(phaseName: String?, options: MutableMap<String, String>?) {
                     val mainMethods = mutableListOf<SootMethod>()
                     Scene.v().applicationClasses.forEach { klass ->
-                        klass.methods.forEach { if (it.isMain) mainMethods.add(it) }
+                        klass.methods.forEach {
+                            if (it.isMain) mainMethods.add(it)
+                        }
                     }
                     println("Enty points size: ${mainMethods.size}")
                     Scene.v().entryPoints = mainMethods
                     icfg = JimpleBasedInterproceduralCFG()
-                    icfg.setIncludePhantomCallees(true)
+                    //icfg.setIncludePhantomCallees(true)
                     analysis = Scene.v().pointsToAnalysis as PAG
 
                     mainMethods.forEach { mainMethod ->
@@ -213,6 +221,7 @@ class SceneExtractor(var lib: String) {
         return method.declaringClass.toString().startsWith("$lib.", true) ||
                 method.declaringClass.toString().lowercase() == lib.lowercase()
     }
+
 
 }
 

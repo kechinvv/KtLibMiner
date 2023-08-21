@@ -46,7 +46,7 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
                 Shift(
                     it.from()!!.name().toString(),
                     it.to().name().toString(),
-                    (it.attrs().get("label") ?: "").toString().split("\\n ").toHashSet()
+                    (it.attrs().get("label") ?: "").toString().replace('+', ' ').split("\\n ").toHashSet()
                 )
             )
         }

@@ -1,6 +1,5 @@
 package me.valer.ktlibminer.inference
 
-import com.google.gson.GsonBuilder
 import guru.nidi.graphviz.attribute.Attributes
 import guru.nidi.graphviz.attribute.Label
 import guru.nidi.graphviz.engine.Format
@@ -9,10 +8,10 @@ import guru.nidi.graphviz.model.Factory.mutGraph
 import guru.nidi.graphviz.model.Factory.mutNode
 import guru.nidi.graphviz.model.Link
 import guru.nidi.graphviz.model.MutableNode
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.JsonConfiguration
+import kotlinx.serialization.json.Json
+import me.valer.ktlibminer.entities.MethodData
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -40,13 +39,14 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
                 states.add(State(it.name().toString(), StateType.DEF))
             }
         }
-        edgesDot.forEach {
+        edgesDot.forEach { it ->
             if (it.from()!!.name().toString() == initial) return@forEach
             shifts.add(
                 Shift(
                     it.from()!!.name().toString(),
                     it.to().name().toString(),
-                    (it.attrs().get("label") ?: "").toString().replace('+', ' ').split("\\n ").toHashSet()
+                    (it.attrs().get("label") ?: "").toString().lines()
+                        .map { method -> Json.decodeFromString(method) }
                 )
             )
         }
@@ -78,7 +78,7 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
 
     fun unionWith(finName: String) {
         val cycleShifts = shifts.filter { it.to == it.from && it.to == finName }
-        val unionWith = hashSetOf<String>()
+        val unionWith = mutableListOf<MethodData>()
         cycleShifts.forEach { unionWith.addAll(it.with) }
         cycleShifts.forEach { it.with = unionWith }
     }
@@ -114,7 +114,7 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
     }
 
     @Serializable
-    data class Shift(var from: String, var to: String, var with: HashSet<String>) {
+    data class Shift(var from: String, var to: String, var with: List<MethodData>) {
         override fun toString(): String = "{from: ${from}, to: ${to}, with: ${with}}"
 
         fun withToLabel(): String = with.joinToString("\\n ")

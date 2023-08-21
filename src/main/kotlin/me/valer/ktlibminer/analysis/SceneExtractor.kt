@@ -1,8 +1,10 @@
 package me.valer.ktlibminer.analysis
 
 import com.google.gson.GsonBuilder
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import me.valer.ktlibminer.config.Configurations
-import me.valer.ktlibminer.config.TraceNode
+import me.valer.ktlibminer.entities.MethodParser
 import me.valer.ktlibminer.storage.DatabaseController
 import soot.*
 import soot.Unit
@@ -40,12 +42,8 @@ class SceneExtractor(var lib: String) {
             else classPaths += File.pathSeparator + classpath
 
             Options.v().set_soot_classpath(classPaths)
-
             Scene.v().loadNecessaryClasses()
-
-            println(Scene.v().applicationClasses.map { it.name })
             PackManager.v().runPacks()
-
             return true
         } catch (e: Throwable) {
             e.printStackTrace()
@@ -73,7 +71,6 @@ class SceneExtractor(var lib: String) {
                     mainMethods.forEach { mainMethod ->
                         val startPoints = icfg.getStartPointsOf(mainMethod)
                         println("Entry Points are: ")
-                        println(mainMethod.signature)
                         println(startPoints)
 
                         stop = false
@@ -174,8 +171,8 @@ class SceneExtractor(var lib: String) {
                         if (invokeGlob.method.name != "<init>") tempTrace.add(invokeGlob)
                         if (tempTrace.isNotEmpty()) {
                             val jsonData = GsonBuilder().disableHtmlEscaping().create().toJson(tempTrace.map { invoke ->
-                                if (Configurations.traceNode == TraceNode.NAME) invoke.method.name
-                                else invoke.method.signature.replace(' ', '+')
+                                val methodData = MethodParser(invoke.method).methodData
+                                Json.encodeToString(methodData)
                             })
                             DatabaseController.addTrace(jsonData!!, key)
                         }
@@ -206,8 +203,9 @@ class SceneExtractor(var lib: String) {
     }
 
     private fun saveMethod(method: SootMethod) {
-        val name = if (Configurations.traceNode == TraceNode.NAME) method.name
-        else method.signature.replace(' ', '+')
+        val methodData = MethodParser(method).methodData
+        val name = Json.encodeToString(methodData)
+
         val klass =
             if (method.isStatic) "${method.declaringClass}__s" else method.declaringClass.toString()
         DatabaseController.addMethod(

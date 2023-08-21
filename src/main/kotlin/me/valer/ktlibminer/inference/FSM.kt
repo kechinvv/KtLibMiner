@@ -11,6 +11,8 @@ import guru.nidi.graphviz.model.MutableNode
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import me.valer.ktlibminer.config.Configurations
+import me.valer.ktlibminer.config.TraceNode
 import me.valer.ktlibminer.entities.MethodData
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -86,7 +88,7 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
     fun toJson(filePath: Path) {
         val `class` = if (info.endsWith("__s")) info.dropLast(3)
         else info
-        val automaton = Automaton(info, `class`, shifts, states)
+        val automaton = Automaton(info, `class`, shifts, states, Configurations.traceNode == TraceNode.SIGNATURE)
         val strJson = json.encodeToString(automaton)
         Files.deleteIfExists(filePath)
         Files.write(
@@ -126,5 +128,11 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
     }
 
     @Serializable
-    data class Automaton(val name: String, val `class`: String, val shifts: Set<Shift>, val states: Set<State>)
+    data class Automaton(
+        val name: String,
+        val `class`: String,
+        val shifts: Set<Shift>,
+        val states: Set<State>,
+        val signature: Boolean
+    )
 }

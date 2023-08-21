@@ -1,5 +1,7 @@
 # KtLibMiner
 Static analysis of library usage for java
+## Prepare
+Need to add and change paths to java libs in `src/main/resources/javapaths.txt`
 ## Options
 - `-a,--all-projects` - download all found projects (only with jar assets by default))
 - `-d,--depth-traversal <arg>` - max depth of trace for analysis or -1 for any depth (default 10)

@@ -34,8 +34,12 @@ class SceneExtractor(var lib: String) {
             Options.v().set_output_format(Options.output_format_jimple)
             Options.v().setPhaseOption("cg.spark", "enabled:true")
 
-            Options.v()
-                .set_soot_classpath("C:\\Users\\valer\\.jdks\\jbr-17.0.8\\lib\\jrt-fs.jar" + File.pathSeparator + classpath)
+            val javaPaths = this::class.java.getResource("/javapaths.txt")?.readText()?.trim()
+            var classPaths = javaPaths?.replace(Regex("(\n|\r|\r\n)"), File.pathSeparator)
+            if (classPaths == null || classPaths == "") classPaths = classpath
+            else classPaths += File.pathSeparator + classpath
+
+            Options.v().set_soot_classpath(classPaths)
 
             Scene.v().loadNecessaryClasses()
 

@@ -1,0 +1,2 @@
+C:/Users/valer/.jdks/jbr-17.0.8/lib/jrt-fs.jar
+C:/Program Files/Java/jdk1.8.0_261/jre/lib/rt.jar

@@ -22,7 +22,7 @@ import java.nio.file.StandardOpenOption
 const val initial = "initial"
 const val finish = "doublecircle"
 
-class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collection<MutableNode>) {
+class FSM(val info: String, edgesDot: Collection<Link>, nodesDot: Collection<MutableNode>) {
     val states = HashSet<State>()
     var shifts = HashSet<Shift>()
     private var unhandled = true
@@ -47,8 +47,10 @@ class FSM(val info: String, val edgesDot: Collection<Link>, val nodesDot: Collec
                 Shift(
                     it.from()!!.name().toString(),
                     it.to().name().toString(),
-                    (it.attrs().get("label") ?: "").toString().lines()
-                        .map { method -> Json.decodeFromString(method) }
+                    it.attrs().get("label")?.toString()?.split("\\n ")
+                        ?.map { method ->
+                            Json.decodeFromString(method)
+                        } ?: listOf()
                 )
             )
         }

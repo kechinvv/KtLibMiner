@@ -174,7 +174,8 @@ class SceneExtractor(var lib: String) {
                                 val methodData = MethodParser(invoke.method).methodData
                                 Json.encodeToString(methodData)
                             })
-                            DatabaseController.addTrace(jsonData!!, key)
+                            val inputClass = if (key.endsWith("__s")) key.dropLast(3) else key
+                            DatabaseController.addTrace(jsonData!!, inputClass)
                         }
                         tempTrace = mutableListOf(invokeGlob)
                     } else tempTrace.add(invokeGlob)
@@ -206,8 +207,7 @@ class SceneExtractor(var lib: String) {
         val methodData = MethodParser(method).methodData
         val name = Json.encodeToString(methodData)
 
-        val klass =
-            if (method.isStatic) "${method.declaringClass}__s" else method.declaringClass.toString()
+        val klass = method.declaringClass.toString()
         DatabaseController.addMethod(
             name,
             klass
